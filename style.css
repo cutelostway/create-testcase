@@ -1,0 +1,241 @@
+/* Custom CSS for Project Creation Modal */
+
+/* Global styling */
+.main .block-container {
+    padding-top: 2rem;
+    max-width: 1200px;
+}
+
+/* Button styling */
+.stButton > button {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Priority level styling */
+.priority-critical {
+    border-left: 4px solid #ff4b4b;
+    padding-left: 12px;
+    background-color: #fff5f5;
+}
+
+.priority-high {
+    border-left: 4px solid #ff8c00;
+    padding-left: 12px;
+    background-color: #fff8f0;
+}
+
+.priority-medium {
+    border-left: 4px solid #00cc44;
+    padding-left: 12px;
+    background-color: #f0fff4;
+}
+
+.priority-low {
+    border-left: 4px solid #0066cc;
+    padding-left: 12px;
+    background-color: #f0f8ff;
+}
+
+/* Modal styling */
+.modal-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+}
+
+.modal-container h2, .modal-container h3 {
+    margin-top: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Form section headers */
+.section-header {
+    font-size: 16px;
+    font-weight: 600;
+    color: #495057;
+    margin: 16px 0 8px 0;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 4px;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Checkbox styling */
+.stCheckbox > label {
+    font-size: 14px;
+}
+
+.stCheckbox > label > div {
+    align-items: center;
+}
+
+/* Radio button styling */
+.stRadio > label {
+    font-weight: 500;
+}
+
+/* Template buttons */
+.template-button {
+    background-color: #e3f2fd;
+    border: 1px solid #90caf9;
+    color: #1976d2;
+}
+
+.template-button:hover {
+    background-color: #bbdefb;
+}
+
+/* Success message styling */
+.success-message {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+    padding: 12px;
+    border-radius: 8px;
+    margin: 16px 0;
+}
+
+/* Project settings summary */
+.settings-summary {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 16px 0;
+}
+
+/* Main create button */
+.create-project-btn {
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 25px;
+    border: none;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s ease;
+}
+
+.create-project-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+/* Landing page styling */
+.landing-container {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px;
+    margin: 20px 0;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+}
+
+.landing-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.landing-subtitle {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-bottom: 32px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Feature boxes */
+.feature-box {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.feature-box:hover {
+    transform: translateY(-5px);
+}
+
+/* Test case expandable sections */
+.test-case-header {
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Progress bar customization */
+.stProgress > div > div > div > div {
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Metrics styling */
+.metric-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #e9ecef;
+}
+
+/* Form input styling */
+.stTextInput > div > div > input {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+}
+
+.stTextInput > div > div > input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.stTextArea > div > div > textarea {
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: border-color 0.3s ease;
+}
+
+.stTextArea > div > div > textarea:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* Expander styling */
+.streamlit-expanderHeader {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.streamlit-expanderContent {
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+}
+
+/* Sidebar styling */
+.css-1d391kg {
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Hide Streamlit menu and footer */
+#MainMenu {visibility: hidden;}
+footer {visibility: hidden;}
+header {visibility: hidden;}
