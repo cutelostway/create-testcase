@@ -483,7 +483,7 @@ except Exception:
     pid = None
 
 # Handle browser back/forward navigation
-# Use a different approach with st.rerun
+# Use JavaScript approach for reliable refresh
 current_url = f"{page}_{pid}"
 if 'last_url' not in st.session_state:
     st.session_state.last_url = current_url
@@ -499,12 +499,14 @@ if st.session_state.last_url != current_url:
     if 'generated_user_story' in st.session_state:
         del st.session_state.generated_user_story
     
-    # Force rerun with a flag to prevent infinite loop
-    if not st.session_state.get('navigation_rerun', False):
-        st.session_state.navigation_rerun = True
-        st.rerun()
-    else:
-        st.session_state.navigation_rerun = False
+    # Force page reload using JavaScript
+    st.markdown("""
+    <script>
+    // Force reload the page when browser navigation is detected
+    window.location.reload(true);
+    </script>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 if page == 'home':
     view_home()
