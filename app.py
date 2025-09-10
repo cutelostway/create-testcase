@@ -301,6 +301,28 @@ def view_create_test_case(project_id: int | None):
         if uploaded_file:
             st.info(f"📎 **File selected:** {uploaded_file.name} ({uploaded_file.size} bytes)")
             
+            # Analysis instructions section
+            st.markdown("### 🎯 Analysis Instructions (Optional)")
+            st.markdown("Provide specific instructions to guide AI analysis of your specification document.")
+            
+            col_instructions1, col_instructions2 = st.columns([2, 1])
+            
+            with col_instructions1:
+                analysis_instructions = st.text_area(
+                    "📝 Analysis Instructions:",
+                    height=100,
+                    placeholder="Examples:\n• For Excel: Analyze only Sheet2 and Sheet3, skip the summary sheet\n• For PDF: Focus on pages 3-4 and 7-8, ignore the cover page\n• For Word: Read sections 2.1 to 2.5, skip the introduction\n• General: Focus on user authentication features, ignore admin functions",
+                    help="Provide specific instructions to guide AI analysis. Examples are shown in the placeholder.",
+                    key="analysis_instructions"
+                )
+            
+            with col_instructions2:
+                st.markdown("**💡 Tips:**")
+                st.markdown("• **Excel:** Specify sheet names or numbers")
+                st.markdown("• **PDF:** Mention page ranges")
+                st.markdown("• **Word:** Reference section numbers")
+                st.markdown("• **General:** Describe what to focus on or ignore")
+            
         # Show analysis status
         if st.session_state.get('generated_user_story'):
             st.success("✅ Specification analyzed! User story generated below.")
@@ -312,8 +334,11 @@ def view_create_test_case(project_id: int | None):
                 file_content = uploaded_file.read()
                 file_type = uploaded_file.type
                 
-                # Process the spec file
-                generated_story = process_uploaded_spec(file_content, file_type, settings)
+                # Get analysis instructions from the form
+                analysis_instructions = st.session_state.get('analysis_instructions', '')
+                
+                # Process the spec file with instructions
+                generated_story = process_uploaded_spec(file_content, file_type, settings, analysis_instructions)
                 
                 # Store in session state for auto-fill
                 st.session_state.generated_user_story = generated_story
