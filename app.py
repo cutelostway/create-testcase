@@ -2,6 +2,7 @@
 import streamlit as st
 from export_to_excel import export_to_excel, export_to_excel_bytes
 from tester_agent import generate_test_cases
+from spec_processor import process_uploaded_spec
 import os
 import json
 from typing import Dict, Any, List
@@ -276,12 +277,80 @@ def view_create_test_case(project_id: int | None):
 
     # Test case generation interface
     st.markdown("## 🚀 Generate Test Cases")
+    
+    # File upload section
+    st.markdown("### 📄 Upload Specification Document (Optional)")
+    st.markdown("Upload a specification document to automatically generate user story from your requirements using AI analysis.")
+    
+    # Create expandable section for file upload
+    with st.expander("📤 Upload & Analyze Specification", expanded=False):
+        col_upload1, col_upload2 = st.columns([3, 1])
+        
+        with col_upload1:
+            uploaded_file = st.file_uploader(
+                "Choose a specification file",
+                type=['xlsx', 'pdf', 'docx'],
+                help="Supported formats: Excel (.xlsx), PDF (.pdf), Word (.docx)",
+                key="spec_uploader"
+            )
+        
+        with col_upload2:
+            analyze_btn = st.button("🔍 Analyze Spec", type="secondary", use_container_width=True)
+        
+        # Show file info if uploaded
+        if uploaded_file:
+            st.info(f"📎 **File selected:** {uploaded_file.name} ({uploaded_file.size} bytes)")
+            
+        # Show analysis status
+        if st.session_state.get('generated_user_story'):
+            st.success("✅ Specification analyzed! User story generated below.")
+    
+    # Process uploaded file
+    if uploaded_file and analyze_btn:
+        with st.spinner("🔄 Analyzing specification document..."):
+            try:
+                file_content = uploaded_file.read()
+                file_type = uploaded_file.type
+                
+                # Process the spec file
+                generated_story = process_uploaded_spec(file_content, file_type, settings)
+                
+                # Store in session state for auto-fill
+                st.session_state.generated_user_story = generated_story
+                st.success("✅ Specification analyzed successfully! User story generated below.")
+                
+            except Exception as e:
+                st.error(f"❌ Error processing file: {str(e)}")
+    
+    # User story input section
+    st.markdown("### 📋 User Story or Functionality Description")
+    
+    # Auto-fill with generated story if available
+    default_story = st.session_state.get('generated_user_story', '')
+    
+    # Show different UI based on whether we have AI-generated content
+    if default_story:
+        st.markdown("**🤖 AI-Generated User Story:**")
+        st.markdown("The user story below was generated from your specification document. You can edit it before generating test cases.")
+        
+        col_clear, col_edit = st.columns([1, 3])
+        with col_clear:
+            if st.button("🗑️ Clear AI Story", type="secondary"):
+                st.session_state.generated_user_story = ""
+                st.rerun()
+        with col_edit:
+            st.markdown("💡 *Edit the story below to customize it for your needs*")
+    
     user_story = st.text_area(
         "📋 Enter User Story or Functionality Description:",
-        height=150,
-        help="Describe the functionality you want to create test cases for",
+        height=250,
+        value=default_story,
+        help="Describe the functionality you want to create test cases for. You can edit the AI-generated story above or write your own.",
         placeholder="Example: As a user, I want to login to the system so that I can access my dashboard..."
     )
+    
+    # Test case generation controls
+    st.markdown("### 🎯 Test Case Generation")
     col_gen = st.columns([2, 1, 1])
     with col_gen[0]:
         generate_btn = st.button("🎯 Generate Test Cases", type="primary", use_container_width=True)
