@@ -483,7 +483,7 @@ except Exception:
     pid = None
 
 # Handle browser back/forward navigation
-# Use a different approach with experimental_rerun
+# Use a different approach with st.rerun()
 # Force rerun on every page load to ensure UI updates
 if 'page_load_count' not in st.session_state:
     st.session_state.page_load_count = 0
@@ -500,7 +500,7 @@ if 'generated_user_story' in st.session_state:
 # Force rerun with a flag to prevent infinite loop
 if not st.session_state.get('navigation_rerun', False):
     st.session_state.navigation_rerun = True
-    st.experimental_rerun()
+    st.rerun()
 else:
     st.session_state.navigation_rerun = False
 
