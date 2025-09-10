@@ -483,26 +483,29 @@ except Exception:
     pid = None
 
 # Handle browser back/forward navigation
-# Use a different approach with st.rerun()
-# Force rerun on every page load to ensure UI updates
-if 'page_load_count' not in st.session_state:
-    st.session_state.page_load_count = 0
+# Use a simple approach with page reload
+current_url = f"{page}_{pid}"
+if 'last_url' not in st.session_state:
+    st.session_state.last_url = current_url
 
-# Increment page load count
-st.session_state.page_load_count += 1
-
-# Clear generated content on navigation
-if 'generated_test_cases' in st.session_state:
-    del st.session_state.generated_test_cases
-if 'generated_user_story' in st.session_state:
-    del st.session_state.generated_user_story
-
-# Force rerun with a flag to prevent infinite loop
-if not st.session_state.get('navigation_rerun', False):
-    st.session_state.navigation_rerun = True
-    st.rerun()
-else:
-    st.session_state.navigation_rerun = False
+# Check if URL changed (browser navigation)
+if st.session_state.last_url != current_url:
+    # Update URL tracking
+    st.session_state.last_url = current_url
+    
+    # Clear generated content
+    if 'generated_test_cases' in st.session_state:
+        del st.session_state.generated_test_cases
+    if 'generated_user_story' in st.session_state:
+        del st.session_state.generated_user_story
+    
+    # Force page reload using JavaScript
+    st.markdown("""
+    <script>
+    window.location.reload();
+    </script>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 if page == 'home':
     view_home()
