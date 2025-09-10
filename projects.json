@@ -1,0 +1,25 @@
+[
+  {
+    "id": 1,
+    "settings": {
+      "name": "test",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "writing_style": "",
+      "detail_level": "",
+      "testing_types": [
+        "Functional Testing"
+      ],
+      "priority_levels": {
+        "critical": "",
+        "high": "",
+        "medium": "",
+        "low": ""
+      },
+      "exclusion_rules": [],
+      "steps_detail": "⚖️ Medium Detail - Balanced main actions & outcomes"
+    }
+  }
+]
