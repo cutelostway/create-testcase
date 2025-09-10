@@ -499,8 +499,12 @@ if st.session_state.navigation_state != current_state:
     if 'generated_user_story' in st.session_state:
         del st.session_state.generated_user_story
     
-    # Force rerun
-    st.rerun()
+    # Force rerun with a flag to prevent infinite loop
+    if not st.session_state.get('navigation_rerun', False):
+        st.session_state.navigation_rerun = True
+        st.rerun()
+    else:
+        st.session_state.navigation_rerun = False
 
 if page == 'home':
     view_home()
