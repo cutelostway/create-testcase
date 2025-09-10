@@ -79,6 +79,9 @@ def go_to(page: str, project_id: int | None = None):
     if project_id is not None:
         params['id'] = project_id
     set_query_params(**params)
+    # Update session state to track navigation
+    st.session_state.last_page = page
+    st.session_state.last_pid = project_id
     st.rerun()
 
 # Initialize session state
@@ -479,6 +482,26 @@ try:
 except Exception:
     page = "home"
     pid = None
+
+# Handle browser back/forward navigation
+if 'last_page' not in st.session_state:
+    st.session_state.last_page = page
+    st.session_state.last_pid = pid
+
+# Check if page changed via browser navigation
+if (st.session_state.last_page != page or st.session_state.last_pid != pid):
+    # Update the last page tracking
+    st.session_state.last_page = page
+    st.session_state.last_pid = pid
+    
+    # Clear any generated content when navigating
+    if 'generated_test_cases' in st.session_state:
+        del st.session_state.generated_test_cases
+    if 'generated_user_story' in st.session_state:
+        del st.session_state.generated_user_story
+    
+    # Force rerun to update the UI
+    st.rerun()
 
 if page == 'home':
     view_home()
