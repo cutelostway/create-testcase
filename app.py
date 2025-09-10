@@ -484,27 +484,25 @@ except Exception:
 
 # Handle browser back/forward navigation
 # Use a different approach with experimental_rerun
-current_url = f"{page}_{pid}"
-if 'last_url' not in st.session_state:
-    st.session_state.last_url = current_url
+# Force rerun on every page load to ensure UI updates
+if 'page_load_count' not in st.session_state:
+    st.session_state.page_load_count = 0
 
-# Check if URL changed (browser navigation)
-if st.session_state.last_url != current_url:
-    # Update URL tracking
-    st.session_state.last_url = current_url
-    
-    # Clear generated content
-    if 'generated_test_cases' in st.session_state:
-        del st.session_state.generated_test_cases
-    if 'generated_user_story' in st.session_state:
-        del st.session_state.generated_user_story
-    
-    # Force rerun with a flag to prevent infinite loop
-    if not st.session_state.get('navigation_rerun', False):
-        st.session_state.navigation_rerun = True
-        st.experimental_rerun()
-    else:
-        st.session_state.navigation_rerun = False
+# Increment page load count
+st.session_state.page_load_count += 1
+
+# Clear generated content on navigation
+if 'generated_test_cases' in st.session_state:
+    del st.session_state.generated_test_cases
+if 'generated_user_story' in st.session_state:
+    del st.session_state.generated_user_story
+
+# Force rerun with a flag to prevent infinite loop
+if not st.session_state.get('navigation_rerun', False):
+    st.session_state.navigation_rerun = True
+    st.experimental_rerun()
+else:
+    st.session_state.navigation_rerun = False
 
 if page == 'home':
     view_home()
