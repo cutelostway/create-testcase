@@ -80,7 +80,7 @@ def go_to(page: str, project_id: int | None = None):
         params['id'] = project_id
     set_query_params(**params)
     # Update session state to track navigation
-    st.session_state.navigation_state = f"{page}_{project_id}"
+    st.session_state.last_url = f"{page}_{project_id}"
     st.rerun()
 
 # Initialize session state
@@ -483,15 +483,15 @@ except Exception:
     pid = None
 
 # Handle browser back/forward navigation
-# Store current URL state
-current_state = f"{page}_{pid}"
-if 'navigation_state' not in st.session_state:
-    st.session_state.navigation_state = current_state
+# Use JavaScript approach for reliable refresh
+current_url = f"{page}_{pid}"
+if 'last_url' not in st.session_state:
+    st.session_state.last_url = current_url
 
-# Check if navigation occurred
-if st.session_state.navigation_state != current_state:
-    # Update state
-    st.session_state.navigation_state = current_state
+# Check if URL changed (browser navigation)
+if st.session_state.last_url != current_url:
+    # Update URL tracking
+    st.session_state.last_url = current_url
     
     # Clear generated content
     if 'generated_test_cases' in st.session_state:
@@ -499,12 +499,15 @@ if st.session_state.navigation_state != current_state:
     if 'generated_user_story' in st.session_state:
         del st.session_state.generated_user_story
     
-    # Force rerun with a flag to prevent infinite loop
-    if not st.session_state.get('navigation_rerun', False):
-        st.session_state.navigation_rerun = True
-        st.rerun()
-    else:
-        st.session_state.navigation_rerun = False
+    # Force refresh using JavaScript
+    st.markdown("""
+    <script>
+    setTimeout(function() {
+        window.location.reload();
+    }, 100);
+    </script>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 if page == 'home':
     view_home()
