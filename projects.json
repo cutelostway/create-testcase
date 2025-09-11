@@ -5,12 +5,14 @@
       "name": "test",
       "description": "",
       "languages": [
-        "English"
+        "Vietnamese"
       ],
       "writing_style": "",
       "detail_level": "",
       "testing_types": [
-        "Functional Testing"
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing"
       ],
       "priority_levels": {
         "critical": "",
