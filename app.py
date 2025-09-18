@@ -1,11 +1,12 @@
 # app.py - Streamlit UI with Project Creation Modal
 import streamlit as st
-from export_to_excel import export_to_excel, export_to_excel_bytes
+from export_to_excel import export_to_excel, export_to_excel_bytes, export_to_excel_template_bytes, export_original_template_bytes
 from tester_agent import generate_test_cases
 from spec_processor import process_uploaded_spec
 import os
 import json
 from typing import Dict, Any, List
+from datetime import date, datetime
 
 # Storage helpers
 PROJECTS_FILE = os.path.join(os.getcwd(), "projects.json")
@@ -79,6 +80,8 @@ def go_to(page: str, project_id: int | None = None):
     if project_id is not None:
         params['id'] = project_id
     set_query_params(**params)
+    # Update session state to track navigation
+    st.session_state.last_url = f"{page}_{project_id}"
     st.rerun()
 
 # Initialize session state
@@ -111,8 +114,11 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     # Prefill values
     defaults = project.get('settings', {}) if (project and project.get('settings')) else {}
 
-    col1, col2 = st.columns(2)
-    with col1:
+    st.markdown('<div class="section-header">📋 Project Information</div>', unsafe_allow_html=True)
+    
+    # Project Information fields in 2 columns layout
+    col_info1, col_info2 = st.columns(2)
+    with col_info1:
         project_name = st.text_input("Project Name *", value=defaults.get('name', ''), help="Enter project name (required)")
         description = st.text_area("Description", max_chars=500, height=100, value=defaults.get('description', ''))
         languages = st.multiselect(
@@ -120,9 +126,24 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
             options=["Vietnamese", "English", "Chinese", "Japanese", "French", "Spanish", "German"],
             default=defaults.get('languages', ['English']),
         )
-    with col2:
-        st.markdown("**Writing Style & Tone**")
-        writing_style = st.text_area("Writing Style & Tone", height=80, value=defaults.get('writing_style', ''))
+        environment = st.multiselect(
+            "Environment *",
+            options=["Chrome", "Firefox", "Edge", "Windows", "MacOS", "Android", "iOS"],
+            default=defaults.get('environment', ['Chrome']),
+            help="Select testing environments (required)"
+        )
+    with col_info2:
+        phase = st.text_input("Phase", value=defaults.get('phase', ''), help="Project phase (optional)")
+        sprint = st.text_input("Sprint", value=defaults.get('sprint', ''), help="Sprint number (optional)")
+        member = st.text_input("Member", value=defaults.get('member', ''), help="Team member name (optional)")
+        
+        # Date range in the same column
+        st.markdown("**Date Range**")
+        col_date1, col_date2 = st.columns(2)
+        with col_date1:
+            start_date = st.date_input("Start Date", value=defaults.get('start_date'), help="Project start date (optional)")
+        with col_date2:
+            end_date = st.date_input("End Date", value=defaults.get('end_date'), help="Project end date (optional)")
 
     st.markdown("---")
     st.markdown('<div class="section-header">🧪 Testing Configuration</div>', unsafe_allow_html=True)
@@ -140,34 +161,41 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
             ("🔗 API/Integration Testing", "API/Integration Testing"),
             ("📱 Responsive Testing", "Responsive Testing")
         ]
-        defaults_testing = set(defaults.get('testing_types', ['Functional Testing']))
+        defaults_testing = set(defaults.get('testing_types', ['UI Testing', 'Functional Testing', 'Data Validation Testing']))
         for display_name, value in test_options:
             if st.checkbox(display_name, value=(value in defaults_testing)):
                 testing_types.append(value)
     with col4:
-        st.markdown("**Checklist Setting - Detail Level**")
-        detail_level = st.text_area("Detail Level", height=80, value=defaults.get('detail_level', ''))
         st.markdown("**Test Steps Detail Level**")
         steps_options = [
             "🔍 Low Detail - Key actions & results only",
             "⚖️ Medium Detail - Balanced main actions & outcomes",
             "📋 High Detail - Comprehensive step-by-step",
         ]
-        steps_default = defaults.get('steps_detail', steps_options[1])
-        steps_detail = st.radio("Select detail level:", options=steps_options, index=steps_options.index(steps_default) if steps_default in steps_options else 1)
+        steps_default = defaults.get('steps_detail', steps_options[2])
+        steps_detail = st.radio("Select detail level:", options=steps_options, index=steps_options.index(steps_default) if steps_default in steps_options else 2)
 
     st.markdown("---")
     st.markdown('<div class="section-header">🎯 Priority Configuration</div>', unsafe_allow_html=True)
     priority_cols = st.columns(4)
     priorities = defaults.get('priority_levels', {})
+    
+    # Default priority descriptions
+    default_priorities = {
+        'critical': 'System crashes, data loss, security vulnerabilities, core functionality broken',
+        'high': 'Major features not working, significant performance issues, important bugs',
+        'medium': 'Minor features affected, cosmetic issues, non-critical bugs',
+        'low': 'Enhancement requests, minor UI improvements, nice-to-have features'
+    }
+    
     with priority_cols[0]:
-        critical_priority = st.text_area("🔴 Critical Priority", height=80, value=priorities.get('critical', ''))
+        critical_priority = st.text_area("🔴 Critical Priority", height=80, value=priorities.get('critical', default_priorities['critical']))
     with priority_cols[1]:
-        high_priority = st.text_area("🟠 High Priority", height=80, value=priorities.get('high', ''))
+        high_priority = st.text_area("🟠 High Priority", height=80, value=priorities.get('high', default_priorities['high']))
     with priority_cols[2]:
-        medium_priority = st.text_area("🟢 Medium Priority", height=80, value=priorities.get('medium', ''))
+        medium_priority = st.text_area("🟢 Medium Priority", height=80, value=priorities.get('medium', default_priorities['medium']))
     with priority_cols[3]:
-        low_priority = st.text_area("🔵 Low Priority", height=80, value=priorities.get('low', ''))
+        low_priority = st.text_area("🔵 Low Priority", height=80, value=priorities.get('low', default_priorities['low']))
 
     st.markdown("---")
     st.markdown('<div class="section-header">🚫 Exclusion Rules</div>', unsafe_allow_html=True)
@@ -193,13 +221,17 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     btn_label = "💾 Save Project" if is_edit else "✅ Create Project"
     with col_submit[0]:
         if st.button(btn_label, type="primary"):
-            if project_name.strip():
+            if project_name.strip() and environment:
                 settings = {
                     'name': project_name,
                     'description': description,
                     'languages': languages,
-                    'writing_style': writing_style,
-                    'detail_level': detail_level,
+                    'environment': environment,
+                    'phase': phase,
+                    'sprint': sprint,
+                    'member': member,
+                    'start_date': start_date,
+                    'end_date': end_date,
                     'testing_types': testing_types,
                     'priority_levels': {
                         'critical': critical_priority,
@@ -216,7 +248,10 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                 st.session_state.project_created = True
                 go_to('create-test-case', saved['id'])
             else:
-                st.error("❗ Project name is required!")
+                if not project_name.strip():
+                    st.error("❗ Project name is required!")
+                elif not environment:
+                    st.error("❗ Environment is required!")
     with col_submit[1]:
         if st.button("❌ Cancel"):
             go_to('home')
@@ -243,6 +278,21 @@ def view_home():
             with cols[0]:
                 st.markdown(f"**{s.get('name','(no name)')}**")
                 st.caption(s.get('description', ''))
+                # Display new project info
+                info_parts = []
+                if s.get('phase'):
+                    info_parts.append(f"Phase: {s.get('phase')}")
+                if s.get('sprint'):
+                    info_parts.append(f"Sprint: {s.get('sprint')}")
+                if s.get('member'):
+                    info_parts.append(f"Member: {s.get('member')}")
+                if s.get('environment'):
+                    env_str = ", ".join(s.get('environment', []))
+                    info_parts.append(f"Environment: {env_str}")
+                if s.get('start_date') and s.get('end_date'):
+                    info_parts.append(f"Duration: {s.get('start_date')} - {s.get('end_date')}")
+                if info_parts:
+                    st.caption(" | ".join(info_parts))
             with cols[1]:
                 if st.button("📝 Edit", key=f"edit_{p['id']}"):
                     go_to('edit-project', p['id'])
@@ -301,6 +351,28 @@ def view_create_test_case(project_id: int | None):
         if uploaded_file:
             st.info(f"📎 **File selected:** {uploaded_file.name} ({uploaded_file.size} bytes)")
             
+            # Analysis instructions section
+            st.markdown("### 🎯 Analysis Instructions (Optional)")
+            st.markdown("Provide specific instructions to guide AI analysis of your specification document.")
+            
+            col_instructions1, col_instructions2 = st.columns([2, 1])
+            
+            with col_instructions1:
+                analysis_instructions = st.text_area(
+                    "📝 Analysis Instructions:",
+                    height=100,
+                    placeholder="Examples:\n• For Excel: Analyze only Sheet2 and Sheet3, skip the summary sheet\n• For PDF: Focus on pages 3-4 and 7-8, ignore the cover page\n• For Word: Read sections 2.1 to 2.5, skip the introduction\n• General: Focus on user authentication features, ignore admin functions",
+                    help="Provide specific instructions to guide AI analysis. Examples are shown in the placeholder.",
+                    key="analysis_instructions"
+                )
+            
+            with col_instructions2:
+                st.markdown("**💡 Tips:**")
+                st.markdown("• **Excel:** Specify sheet names or numbers")
+                st.markdown("• **PDF:** Mention page ranges")
+                st.markdown("• **Word:** Reference section numbers")
+                st.markdown("• **General:** Describe what to focus on or ignore")
+            
         # Show analysis status
         if st.session_state.get('generated_user_story'):
             st.success("✅ Specification analyzed! User story generated below.")
@@ -312,8 +384,11 @@ def view_create_test_case(project_id: int | None):
                 file_content = uploaded_file.read()
                 file_type = uploaded_file.type
                 
-                # Process the spec file
-                generated_story = process_uploaded_spec(file_content, file_type, settings)
+                # Get analysis instructions from the form
+                analysis_instructions = st.session_state.get('analysis_instructions', '')
+                
+                # Process the spec file with instructions
+                generated_story = process_uploaded_spec(file_content, file_type, settings, analysis_instructions)
                 
                 # Store in session state for auto-fill
                 st.session_state.generated_user_story = generated_story
@@ -411,14 +486,29 @@ def view_create_test_case(project_id: int | None):
         with col_export[1]:
             try:
                 if export_format == "Excel":
-                    data = export_to_excel_bytes(test_cases)
-                    st.download_button(
-                        label="📥 Download Excel",
-                        data=data,
-                        file_name="test_cases.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        use_container_width=True,
-                    )
+                    # Sử dụng template gốc (giữ nguyên format, màu sắc, font...)
+                    try:
+                        data = export_original_template_bytes(test_cases, settings)
+                        st.download_button(
+                            label="📥 Download Excel Template",
+                            data=data,
+                            file_name=f"TPL-QA-01-04_{settings.get('name', 'TestPlan')}_v1.0.xlsm",
+                            mime="application/vnd.ms-excel.sheet.macroEnabled.12",
+                            use_container_width=True,
+                        )
+                    except FileNotFoundError:
+                        st.error("❌ Template file không tồn tại. Vui lòng đảm bảo file 'TPL-QA-01-04_Testcase_v1.3 (1).xlsm' có trong thư mục dự án.")
+                    except Exception as e:
+                        st.error(f"❌ Lỗi khi tạo file Excel: {str(e)}")
+                        # Fallback về template mới nếu có lỗi
+                        data = export_to_excel_template_bytes(test_cases, settings)
+                        st.download_button(
+                            label="📥 Download Excel Template (Fallback)",
+                            data=data,
+                            file_name=f"TPL-QA-01-04_{settings.get('name', 'TestPlan')}_v1.0.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            use_container_width=True,
+                        )
                 elif export_format == "CSV":
                     import pandas as pd
                     rows = [tc.dict() if hasattr(tc, "dict") else dict(tc) for tc in test_cases]
@@ -454,6 +544,32 @@ try:
 except Exception:
     page = "home"
     pid = None
+
+# Handle browser back/forward navigation
+# Use JavaScript approach for reliable refresh
+current_url = f"{page}_{pid}"
+if 'last_url' not in st.session_state:
+    st.session_state.last_url = current_url
+
+# Check if URL changed (browser navigation)
+if st.session_state.last_url != current_url:
+    # Update URL tracking
+    st.session_state.last_url = current_url
+    
+    # Clear generated content
+    if 'generated_test_cases' in st.session_state:
+        del st.session_state.generated_test_cases
+    if 'generated_user_story' in st.session_state:
+        del st.session_state.generated_user_story
+    
+    # Force page reload using JavaScript
+    st.markdown("""
+    <script>
+    // Force reload the page when browser navigation is detected
+    window.location.reload(true);
+    </script>
+    """, unsafe_allow_html=True)
+    st.stop()
 
 if page == 'home':
     view_home()

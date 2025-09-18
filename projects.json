@@ -23,5 +23,113 @@
       "exclusion_rules": [],
       "steps_detail": "⚖️ Medium Detail - Balanced main actions & outcomes"
     }
+  },
+  {
+    "id": 2,
+    "settings": {
+      "name": "432423",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "writing_style": "",
+      "detail_level": "",
+      "testing_types": [
+        "Functional Testing"
+      ],
+      "priority_levels": {
+        "critical": "",
+        "high": "",
+        "medium": "",
+        "low": ""
+      },
+      "exclusion_rules": [],
+      "steps_detail": "⚖️ Medium Detail - Balanced main actions & outcomes"
+    }
+  },
+  {
+    "id": 3,
+    "settings": {
+      "name": ".",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "writing_style": "",
+      "detail_level": "",
+      "testing_types": [
+        "Functional Testing"
+      ],
+      "priority_levels": {
+        "critical": "",
+        "high": "",
+        "medium": "",
+        "low": ""
+      },
+      "exclusion_rules": [],
+      "steps_detail": "⚖️ Medium Detail - Balanced main actions & outcomes"
+    }
+  },
+  {
+    "id": 4,
+    "settings": {
+      "name": "thaind",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "environment": [
+        "Chrome"
+      ],
+      "phase": "",
+      "sprint": "",
+      "member": "",
+      "start_date": null,
+      "end_date": null,
+      "testing_types": [
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing"
+      ],
+      "priority_levels": {
+        "critical": "System crashes, data loss, security vulnerabilities, core functionality broken",
+        "high": "Major features not working, significant performance issues, important bugs",
+        "medium": "Minor features affected, cosmetic issues, non-critical bugs",
+        "low": "Enhancement requests, minor UI improvements, nice-to-have features"
+      },
+      "exclusion_rules": [],
+      "steps_detail": "📋 High Detail - Comprehensive step-by-step"
+    }
+  },
+  {
+    "id": 5,
+    "settings": {
+      "name": "test",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "environment": [
+        "Chrome"
+      ],
+      "phase": "",
+      "sprint": "",
+      "member": "",
+      "start_date": null,
+      "end_date": null,
+      "testing_types": [
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing"
+      ],
+      "priority_levels": {
+        "critical": "System crashes, data loss, security vulnerabilities, core functionality broken",
+        "high": "Major features not working, significant performance issues, important bugs",
+        "medium": "Minor features affected, cosmetic issues, non-critical bugs",
+        "low": "Enhancement requests, minor UI improvements, nice-to-have features"
+      },
+      "exclusion_rules": [],
+      "steps_detail": "📋 High Detail - Comprehensive step-by-step"
+    }
   }
 ]
