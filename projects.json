@@ -7,8 +7,15 @@
       "languages": [
         "Vietnamese"
       ],
-      "writing_style": "",
-      "detail_level": "",
+      "environment": [
+        "Edge",
+        "Firefox"
+      ],
+      "phase": "",
+      "sprint": "",
+      "member": "",
+      "start_date": null,
+      "end_date": null,
       "testing_types": [
         "UI Testing",
         "Functional Testing",
