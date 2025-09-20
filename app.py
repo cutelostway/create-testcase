@@ -48,7 +48,7 @@ def get_project(project_id: int) -> Dict[str, Any] | None:
             return p
     return None
 
-# Router helpers (prefer stable API, fallback to experimental for old versions)
+# Router helpers for subdirectory-based routing
 
 def get_query_params() -> Dict[str, List[str]]:
     try:
@@ -61,7 +61,6 @@ def get_query_params() -> Dict[str, List[str]]:
             return st.experimental_get_query_params()
         except Exception:
             return {}
-
 
 def set_query_params(**kwargs):
     try:
@@ -76,12 +75,43 @@ def set_query_params(**kwargs):
             pass
 
 def go_to(page: str, project_id: int | None = None):
+    """Navigate to a new page using subdirectory URLs"""
+    # Map page names to subdirectories
+    page_mapping = {
+        'home': 'list-project',
+        'create-project': 'create-project',
+        'edit-project': 'edit-project', 
+        'create-test-case': 'create-testcase',
+        'create-testcase': 'create-testcase'
+    }
+    
+    subdirectory = page_mapping.get(page, page)
+    
+    # Build the new URL
+    if project_id is not None:
+        new_url = f"/{subdirectory}/{project_id}"
+    else:
+        new_url = f"/{subdirectory}"
+    
+    # Update session state
+    st.session_state.current_path = new_url
+    st.session_state.last_url = f"{page}_{project_id}"
+    
+    # Use query params for actual routing
     params = {'page': page}
     if project_id is not None:
         params['id'] = project_id
+    
     set_query_params(**params)
-    # Update session state to track navigation
-    st.session_state.last_url = f"{page}_{project_id}"
+    
+    # Use JavaScript to change URL in browser
+    navigation_script = f"""
+    <script>
+    // Change URL without page reload
+    window.history.pushState({{}}, '', '{new_url}');
+    </script>
+    """
+    st.components.v1.html(navigation_script, height=0)
     st.rerun()
 
 # Initialize session state
@@ -91,9 +121,124 @@ if 'project_created' not in st.session_state:
     st.session_state.project_created = False
 if 'project_settings' not in st.session_state:
     st.session_state.project_settings = {}
+if 'current_path' not in st.session_state:
+    st.session_state.current_path = "/list-project"
 
 # Page configuration
 st.set_page_config(page_title="AI Test Case Generator", page_icon="🧪", layout="wide")
+
+# URL Router Component
+def url_router():
+    """Component to handle URL routing"""
+    # Create a hidden component to handle URL changes
+    with st.container():
+        st.markdown("""
+        <script>
+        // Function to update URL based on query params
+        function updateURLFromParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page');
+            const id = urlParams.get('id');
+            
+            if (page) {
+                let newPath = '/' + page;
+                if (id) {
+                    newPath += '/' + id;
+                }
+                
+                // Update URL without reload
+                if (window.location.pathname !== newPath) {
+                    window.history.pushState({}, '', newPath);
+                }
+            } else if (window.location.pathname !== '/') {
+                // Handle direct URL access
+                const path = window.location.pathname;
+                const parts = path.split('/').filter(p => p);
+                
+                if (parts.length > 0) {
+                    const page = parts[0];
+                    const id = parts.length > 1 ? parts[1] : null;
+                    
+                    // Update query params
+                    const url = new URL(window.location);
+                    url.searchParams.set('page', page);
+                    if (id) {
+                        url.searchParams.set('id', id);
+                    }
+                    
+                    // Reload with new query params
+                    window.location.href = url.toString();
+                }
+            }
+        }
+        
+        // Function to handle browser back/forward
+        function handlePopState() {
+            // Parse current path and update query params
+            const path = window.location.pathname;
+            const parts = path.split('/').filter(p => p);
+            
+            if (parts.length > 0) {
+                const page = parts[0];
+                const id = parts.length > 1 ? parts[1] : null;
+                
+                // Update query params
+                const url = new URL(window.location);
+                url.searchParams.set('page', page);
+                if (id) {
+                    url.searchParams.set('id', id);
+                } else {
+                    url.searchParams.delete('id');
+                }
+                
+                // Force reload with new query params
+                window.location.href = url.toString();
+            } else {
+                // Handle root path - go to list-project
+                const url = new URL(window.location);
+                url.searchParams.set('page', 'list-project');
+                url.searchParams.delete('id');
+                window.location.href = url.toString();
+            }
+        }
+        
+        // Update URL on page load
+        updateURLFromParams();
+        
+        // Listen for browser back/forward
+        window.addEventListener('popstate', function(event) {
+            // Force reload immediately
+            handlePopState();
+        });
+        
+        // Track URL changes for better browser navigation
+        let lastPath = window.location.pathname;
+        let lastSearch = window.location.search;
+        
+        // Check for URL changes periodically (fallback)
+        setInterval(function() {
+            const currentPath = window.location.pathname;
+            const currentSearch = window.location.search;
+            
+            // If URL changed (path or search params)
+            if (currentPath !== lastPath || currentSearch !== lastSearch) {
+                lastPath = currentPath;
+                lastSearch = currentSearch;
+                
+                // Handle the change
+                const urlParams = new URLSearchParams(currentSearch);
+                const page = urlParams.get('page');
+                
+                if (!page && currentPath !== '/') {
+                    handlePopState();
+                } else if (page) {
+                    // URL changed, force reload to update Streamlit
+                    window.location.reload();
+                }
+            }
+        }, 100);
+        </script>
+        """, unsafe_allow_html=True)
 
 # Load custom CSS
 def load_css():
@@ -104,6 +249,9 @@ def load_css():
         pass
 
 load_css()
+
+# Initialize URL router
+url_router()
 
 # CREATE / EDIT FORMS ---------------------------------------------------------
 def render_project_form(mode: str = "create", project: Dict[str, Any] | None = None):
@@ -246,7 +394,7 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                 saved = upsert_project(record)
                 st.session_state.project_settings = settings
                 st.session_state.project_created = True
-                go_to('create-test-case', saved['id'])
+                go_to('create-testcase', saved['id'])
             else:
                 if not project_name.strip():
                     st.error("❗ Project name is required!")
@@ -254,7 +402,7 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                     st.error("❗ Environment is required!")
     with col_submit[1]:
         if st.button("❌ Cancel"):
-            go_to('home')
+            go_to('list-project')
 
 # VIEWS -----------------------------------------------------------------------
 def view_home():
@@ -299,10 +447,18 @@ def view_home():
             with cols[2]:
                 if st.button("🧪 Create Testcase", key=f"tc_{p['id']}"):
                     st.session_state.project_settings = s
-                    go_to('create-test-case', p['id'])
+                    go_to('create-testcase', p['id'])
 
 
 def view_create_project():
+    # Add Back button
+    col_back, col_title = st.columns([1, 4])
+    with col_back:
+        if st.button("← Back", type="secondary"):
+            go_to('list-project')
+    with col_title:
+        st.markdown("")
+    
     render_project_form(mode="create")
 
 def view_edit_project(project_id: int | None):
@@ -313,6 +469,15 @@ def view_edit_project(project_id: int | None):
     if not project:
         st.error("Project không tồn tại")
         return
+    
+    # Add Back button
+    col_back, col_title = st.columns([1, 4])
+    with col_back:
+        if st.button("← Back", type="secondary"):
+            go_to('list-project')
+    with col_title:
+        st.markdown("")
+    
     render_project_form(mode="edit", project=project)
 
 def view_create_test_case(project_id: int | None):
@@ -323,7 +488,13 @@ def view_create_test_case(project_id: int | None):
             st.session_state.project_settings = project.get('settings', {})
     settings = st.session_state.get('project_settings', {})
 
-    st.markdown(f"# 🎯 Project: {settings.get('name', 'Unnamed Project')}")
+    # Add Back button
+    col_back, col_title = st.columns([1, 4])
+    with col_back:
+        if st.button("← Back", type="secondary"):
+            go_to('list-project')
+    with col_title:
+        st.markdown(f"# 🎯 Project: {settings.get('name', 'Unnamed Project')}")
 
     # Test case generation interface
     st.markdown("## 🚀 Generate Test Cases")
@@ -538,15 +709,14 @@ params = get_query_params()
 page = None
 pid = None
 try:
-    page = (params.get('page', ["home"]) or ["home"])[0]
+    page = (params.get('page', ["list-project"]) or ["list-project"])[0]
     pid = params.get('id', [None])[0]
     pid = int(pid) if pid not in (None, "", []) else None
 except Exception:
-    page = "home"
+    page = "list-project"
     pid = None
 
 # Handle browser back/forward navigation
-# Use JavaScript approach for reliable refresh
 current_url = f"{page}_{pid}"
 if 'last_url' not in st.session_state:
     st.session_state.last_url = current_url
@@ -562,22 +732,34 @@ if st.session_state.last_url != current_url:
     if 'generated_user_story' in st.session_state:
         del st.session_state.generated_user_story
     
-    # Force page reload using JavaScript
-    st.markdown("""
-    <script>
-    // Force reload the page when browser navigation is detected
-    window.location.reload(true);
-    </script>
-    """, unsafe_allow_html=True)
-    st.stop()
+    # Force rerun to update the page
+    st.rerun()
 
-if page == 'home':
+# Add a hidden component to detect URL changes
+st.markdown("""
+<script>
+// Track URL changes and force reload if needed
+let lastUrl = window.location.href;
+setInterval(function() {
+    const currentUrl = window.location.href;
+    if (currentUrl !== lastUrl) {
+        lastUrl = currentUrl;
+        // Force reload to update Streamlit
+        window.location.reload();
+    }
+}, 200);
+</script>
+""", unsafe_allow_html=True)
+
+# Route to appropriate view
+if page == 'list-project' or page == 'home':
     view_home()
 elif page == 'create-project':
     view_create_project()
 elif page == 'edit-project':
     view_edit_project(pid)
-elif page == 'create-test-case':
+elif page == 'create-testcase' or page == 'create-test-case':
     view_create_test_case(pid)
 else:
+    # Default to list-project for unknown routes
     view_home()
