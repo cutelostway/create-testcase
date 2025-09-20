@@ -3,7 +3,7 @@
     "id": 1,
     "settings": {
       "name": "test",
-      "description": "",
+      "description": "098098",
       "languages": [
         "Vietnamese"
       ],
@@ -112,6 +112,37 @@
     "id": 5,
     "settings": {
       "name": "test",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "environment": [
+        "Chrome"
+      ],
+      "phase": "",
+      "sprint": "",
+      "member": "",
+      "start_date": null,
+      "end_date": null,
+      "testing_types": [
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing"
+      ],
+      "priority_levels": {
+        "critical": "System crashes, data loss, security vulnerabilities, core functionality broken",
+        "high": "Major features not working, significant performance issues, important bugs",
+        "medium": "Minor features affected, cosmetic issues, non-critical bugs",
+        "low": "Enhancement requests, minor UI improvements, nice-to-have features"
+      },
+      "exclusion_rules": [],
+      "steps_detail": "📋 High Detail - Comprehensive step-by-step"
+    }
+  },
+  {
+    "id": 6,
+    "settings": {
+      "name": "987987",
       "description": "",
       "languages": [
         "English"

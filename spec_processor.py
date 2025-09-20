@@ -1,7 +1,6 @@
 # spec_processor.py - File spec processing and AI analysis
 import streamlit as st
 import pandas as pd
-import PyPDF2
 import pypdf
 from docx import Document
 import io
@@ -108,11 +107,11 @@ def extract_text_from_file(file_content: bytes, file_type: str, analysis_instruc
                         text_content += page_text + "\n"
                         
             except Exception:
-                # Fallback to PyPDF2
-                pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
+                # Fallback to pypdf (same as main)
+                pdf_reader = pypdf.PdfReader(io.BytesIO(file_content))
                 total_pages = len(pdf_reader.pages)
                 
-                # Apply same page selection logic for PyPDF2
+                # Apply same page selection logic for pypdf
                 selected_pages = list(range(total_pages))
                 if analysis_instructions and any(keyword in analysis_instructions.lower() for keyword in ['page', 'pages']):
                     import re
