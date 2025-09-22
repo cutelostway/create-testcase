@@ -1,6 +1,6 @@
 # app.py - Streamlit UI with Project Creation Modal
 import streamlit as st
-from export_to_excel import export_to_excel, export_to_excel_bytes, export_to_excel_template_bytes, export_original_template_bytes
+from template_updater import update_template_with_values
 from tester_agent import generate_test_cases
 from spec_processor import process_uploaded_spec
 import os
@@ -659,7 +659,7 @@ def view_create_test_case(project_id: int | None):
                 if export_format == "Excel":
                     # Sử dụng template gốc (giữ nguyên format, màu sắc, font...)
                     try:
-                        data = export_original_template_bytes(test_cases, settings)
+                        data = update_template_with_values(settings, test_cases)
                         st.download_button(
                             label="📥 Download Excel Template",
                             data=data,
@@ -672,7 +672,7 @@ def view_create_test_case(project_id: int | None):
                     except Exception as e:
                         st.error(f"❌ Lỗi khi tạo file Excel: {str(e)}")
                         # Fallback về template mới nếu có lỗi
-                        data = export_to_excel_template_bytes(test_cases, settings)
+                        data = update_template_with_values(settings, test_cases)
                         st.download_button(
                             label="📥 Download Excel Template (Fallback)",
                             data=data,
