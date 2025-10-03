@@ -726,7 +726,6 @@ def view_create_test_case(project_id: int | None):
 
     test_cases = st.session_state.get('generated_test_cases', [])
     if test_cases:
-        st.success(f"✅ Generated {len(test_cases)} test cases successfully!")
         
         # Lưu ý: Form chỉnh sửa được render inline bên trong từng expander để tránh trùng key
         
