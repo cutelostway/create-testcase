@@ -815,10 +815,13 @@ def view_create_test_case(project_id: int | None):
                     priority_icon = icon
                     break
             
-            with st.expander(f"{priority_icon} Test Case {i}: {case_dict.get('test_title', 'Untitled')}", expanded=False):
+            # Check if this test case is being edited to determine if expander should be open
+            index_zero_based = i - 1
+            is_editing = st.session_state.get('editing_test_case') == index_zero_based
+            
+            with st.expander(f"{priority_icon} Test Case {i}: {case_dict.get('test_title', 'Untitled')}", expanded=is_editing):
                 # If this is the one being edited, render the editor inline
-                index_zero_based = i - 1
-                if st.session_state.get('editing_test_case') == index_zero_based:
+                if is_editing:
                     # Dùng key form duy nhất theo project + index để tránh trùng
                     with st.container():
                         render_test_case_editor(case_dict, index_zero_based, project_id)
