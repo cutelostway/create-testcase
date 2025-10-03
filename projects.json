@@ -8,7 +8,10 @@
         "Vietnamese"
       ],
       "environment": [
-        "Chrome"
+        "Chrome",
+        "Windows",
+        "Firefox",
+        "Android"
       ],
       "jira_project_key": "LT",
       "jira_server": "http://10.101.0.217:8080/",
