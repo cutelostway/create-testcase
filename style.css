@@ -73,6 +73,12 @@
     -webkit-text-fill-color: transparent;
 }
 
+/* Fix for emoji/icons in section headers */
+.section-header {
+    -webkit-text-fill-color: initial !important;
+    color: #495057 !important;
+}
+
 /* Checkbox styling */
 .stCheckbox > label {
     font-size: 14px;
