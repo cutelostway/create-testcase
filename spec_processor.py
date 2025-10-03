@@ -67,6 +67,11 @@ def analyze_spec_with_ai(spec_text: str, project_settings: Dict[str, Any]) -> st
         # Load environment variables
         load_dotenv()
         
+        # Check if API key is available
+        api_key = os.getenv('GROQ_API_KEY')
+        if not api_key:
+            raise Exception("GROQ_API_KEY not found in environment variables")
+        
         # Initialize Groq LLM for spec analysis
         analysis_llm = ChatGroq(
             model="llama-3.1-8b-instant",
@@ -76,64 +81,119 @@ def analyze_spec_with_ai(spec_text: str, project_settings: Dict[str, Any]) -> st
             max_retries=2,
         )
         
-        # Create a comprehensive prompt for spec analysis
-        analysis_prompt = f"""
-        You are an expert business analyst and software tester. Analyze the following specification document and extract key functionality requirements to create a comprehensive user story.
+        # Check if Vietnamese is selected
+        languages = project_settings.get('languages', [])
+        is_vietnamese = "Vietnamese" in languages or "Tiếng Việt" in languages
+        
+        # Create language-specific prompt
+        if is_vietnamese:
+            analysis_prompt = f"""
+Bạn là một chuyên gia phân tích nghiệp vụ và kiểm thử phần mềm. Hãy phân tích tài liệu đặc tả sau và trích xuất các yêu cầu chức năng chính để tạo ra một câu chuyện người dùng toàn diện.
 
-        Project Context:
-        - Testing Types: {', '.join(project_settings.get('testing_types', []))}
-        - Languages: {', '.join(project_settings.get('languages', []))}
-        - Writing Style: {project_settings.get('writing_style', 'Professional and clear')}
+Bối cảnh Dự án:
+- Loại Kiểm thử: {', '.join(project_settings.get('testing_types', []))}
+- Ngôn ngữ: {', '.join(project_settings.get('languages', []))}
+- Phong cách Viết: {project_settings.get('writing_style', 'Chuyên nghiệp và rõ ràng')}
 
-        Specification Document:
-        {spec_text}
+Tài liệu Đặc tả:
+{spec_text}
 
-        Please analyze this specification and create a detailed user story that includes:
+Hãy phân tích đặc tả này và tạo ra một câu chuyện người dùng chi tiết bao gồm:
 
-        1. **User Personas**: Identify the main user types and their roles
-        2. **Core Features**: Extract the primary functionality and features
-        3. **User Workflows**: Describe the main user journeys and processes
-        4. **Acceptance Criteria**: List the key requirements and success criteria
-        5. **Business Rules**: Identify any constraints, validations, or business logic
-        6. **Integration Points**: Note any external systems or dependencies
+1. **Personas Người dùng**: Xác định các loại người dùng chính và vai trò của họ
+2. **Tính năng Cốt lõi**: Trích xuất chức năng và tính năng chính
+3. **Quy trình Người dùng**: Mô tả các hành trình và quy trình chính của người dùng
+4. **Tiêu chí Chấp nhận**: Liệt kê các yêu cầu chính và tiêu chí thành công
+5. **Quy tắc Nghiệp vụ**: Xác định các ràng buộc, xác thực hoặc logic nghiệp vụ
+6. **Điểm Tích hợp**: Ghi chú các hệ thống bên ngoài hoặc phụ thuộc
 
-        Format your response as a comprehensive user story that can be used to generate test cases. Structure it clearly with sections for each aspect above.
+Định dạng phản hồi của bạn như một câu chuyện người dùng toàn diện có thể được sử dụng để tạo test case. Cấu trúc rõ ràng với các phần cho từng khía cạnh trên.
 
-        Focus on creating actionable, testable requirements that cover both positive and negative scenarios.
-        """
+Tập trung vào việc tạo ra các yêu cầu có thể thực hiện, có thể kiểm thử bao gồm cả các kịch bản tích cực và tiêu cực.
+
+QUAN TRỌNG: Viết toàn bộ phản hồi bằng tiếng Việt!
+            """
+        else:
+            analysis_prompt = f"""
+You are an expert business analyst and software tester. Analyze the following specification document and extract key functionality requirements to create a comprehensive user story.
+
+Project Context:
+- Testing Types: {', '.join(project_settings.get('testing_types', []))}
+- Languages: {', '.join(project_settings.get('languages', []))}
+- Writing Style: {project_settings.get('writing_style', 'Professional and clear')}
+
+Specification Document:
+{spec_text}
+
+Please analyze this specification and create a detailed user story that includes:
+
+1. **User Personas**: Identify the main user types and their roles
+2. **Core Features**: Extract the primary functionality and features
+3. **User Workflows**: Describe the main user journeys and processes
+4. **Acceptance Criteria**: List the key requirements and success criteria
+5. **Business Rules**: Identify any constraints, validations, or business logic
+6. **Integration Points**: Note any external systems or dependencies
+
+Format your response as a comprehensive user story that can be used to generate test cases. Structure it clearly with sections for each aspect above.
+
+Focus on creating actionable, testable requirements that cover both positive and negative scenarios.
+            """
         
         # Get AI analysis
         response = analysis_llm.invoke(analysis_prompt)
         ai_analysis = response.content
         
-        # Format the final user story
-        formatted_story = f"""
-# 📋 AI-Generated User Story from Specification
+        # Format the final user story based on language
+        if is_vietnamese:
+            formatted_story = f"""# Câu Chuyện Người Dùng Được Tạo Từ Đặc Tả (AI)
 
 {ai_analysis}
 
 ---
 
-**📄 Original Specification Summary:**
+**Tóm Tắt Đặc Tả Gốc:**
 {spec_text[:300]}{'...' if len(spec_text) > 300 else ''}
 
-**💡 Note:** This user story was automatically generated from your specification document. Please review and modify as needed before generating test cases.
-        """
+**Lưu Ý:** Câu chuyện người dùng này được tạo tự động từ tài liệu đặc tả của bạn. Vui lòng xem xét và chỉnh sửa nếu cần trước khi tạo test case."""
+        else:
+            formatted_story = f"""# AI-Generated User Story from Specification
+
+{ai_analysis}
+
+---
+
+**Original Specification Summary:**
+{spec_text[:300]}{'...' if len(spec_text) > 300 else ''}
+
+**Note:** This user story was automatically generated from your specification document. Please review and modify as needed before generating test cases."""
         
         return formatted_story
         
     except Exception as e:
         st.error(f"Error analyzing spec with AI: {str(e)}")
-        return f"""
-# 📋 Specification Analysis (Fallback)
+        
+        # Create fallback content based on language
+        languages = project_settings.get('languages', [])
+        is_vietnamese = "Vietnamese" in languages or "Tiếng Việt" in languages
+        
+        if is_vietnamese:
+            return f"""# Phân Tích Đặc Tả (Dự phòng)
 
-**⚠️ AI Analysis Error:** {str(e)}
+**Lỗi Phân Tích AI:** {str(e)}
 
-**📄 Specification Content:**
+**Nội dung Đặc tả:**
 {spec_text[:500]}{'...' if len(spec_text) > 500 else ''}
 
-**💡 Manual Review Required:** Please review the specification content above and manually create a user story for test case generation.
-        """
+**Cần Xem Xét Thủ Công:** Vui lòng xem xét nội dung đặc tả ở trên và tạo thủ công một câu chuyện người dùng để tạo test case."""
+        else:
+            return f"""# Specification Analysis (Fallback)
+
+**AI Analysis Error:** {str(e)}
+
+**Specification Content:**
+{spec_text[:500]}{'...' if len(spec_text) > 500 else ''}
+
+**Manual Review Required:** Please review the specification content above and manually create a user story for test case generation."""
 
 def process_uploaded_spec(file_content: bytes, file_type: str, project_settings: Dict[str, Any]) -> str:
     """

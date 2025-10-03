@@ -3,6 +3,7 @@ import streamlit as st
 from export_to_excel import export_to_excel, export_to_excel_bytes
 from tester_agent import generate_test_cases
 from spec_processor import process_uploaded_spec
+from jira_sync import sync_test_cases_to_jira
 import os
 import json
 from typing import Dict, Any, List
@@ -47,6 +48,181 @@ def get_project(project_id: int) -> Dict[str, Any] | None:
             return p
     return None
 
+# Test case storage helpers
+TEST_CASES_FILE = os.path.join(os.getcwd(), "test_cases.json")
+
+def load_test_cases(project_id: int) -> List[Dict[str, Any]]:
+    """Load saved test cases for a project"""
+    try:
+        if not os.path.exists(TEST_CASES_FILE):
+            return []
+        with open(TEST_CASES_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, dict):
+                return data.get(str(project_id), [])
+            return []
+    except Exception:
+        return []
+
+def save_test_cases(project_id: int, test_cases: List[Dict[str, Any]]):
+    """Save test cases for a project"""
+    try:
+        # Load existing data
+        existing_data = {}
+        if os.path.exists(TEST_CASES_FILE):
+            with open(TEST_CASES_FILE, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        
+        # Update with new test cases
+        existing_data[str(project_id)] = test_cases
+        
+        # Save back to file
+        with open(TEST_CASES_FILE, "w", encoding="utf-8") as f:
+            json.dump(existing_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        st.error(f"Lỗi khi lưu test cases: {e}")
+
+def convert_test_case_to_dict(test_case) -> Dict[str, Any]:
+    """Convert TestCase object to dictionary"""
+    # Suppress all Pydantic deprecation warnings
+    import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        
+        try:
+            # Prefer Pydantic v2 API when available
+            if hasattr(test_case, 'model_dump'):
+                return test_case.model_dump()
+            elif hasattr(test_case, 'dict'):
+                return test_case.dict()
+            elif hasattr(test_case, '__dict__'):
+                return test_case.__dict__
+            else:
+                return dict(test_case)
+        except Exception as e:
+            # Fallback to basic conversion if all else fails
+            if hasattr(test_case, '__dict__'):
+                return test_case.__dict__
+            else:
+                return {}
+
+def render_test_case_editor(test_case_dict: Dict[str, Any], test_case_index: int, project_id: int = None):
+    """Render test case editor form"""
+    st.markdown(f"### ✏️ Chỉnh sửa Test Case {test_case_index + 1}")
+    
+    # Create form with current values
+    # Use simpler form key to avoid conflicts
+    unique_key = f"edit_form_{project_id}_{test_case_index}" if project_id else f"edit_form_{test_case_index}"
+    with st.form(key=unique_key):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            test_case_id = st.number_input(
+                "🆔 Test Case ID",
+                value=test_case_dict.get('test_case_id', test_case_index + 1),
+                min_value=1,
+                key=f"tc_id_{test_case_index}"
+            )
+            test_title = st.text_input(
+                "📝 Tiêu đề Test Case",
+                value=test_case_dict.get('test_title', ''),
+                key=f"tc_title_{test_case_index}"
+            )
+            description = st.text_area(
+                "📄 Mô tả",
+                value=test_case_dict.get('description', ''),
+                height=100,
+                key=f"tc_desc_{test_case_index}"
+            )
+            preconditions = st.text_area(
+                "⚙️ Điều kiện tiên quyết",
+                value=test_case_dict.get('preconditions', ''),
+                height=80,
+                key=f"tc_pre_{test_case_index}"
+            )
+        
+        with col2:
+            test_data = st.text_area(
+                "📊 Dữ liệu kiểm thử",
+                value=test_case_dict.get('test_data', ''),
+                height=80,
+                key=f"tc_data_{test_case_index}"
+            )
+            expected_result = st.text_area(
+                "✅ Kết quả mong đợi",
+                value=test_case_dict.get('expected_result', ''),
+                height=100,
+                key=f"tc_result_{test_case_index}"
+            )
+            comments = st.text_area(
+                "💬 Ghi chú",
+                value=test_case_dict.get('comments', ''),
+                height=80,
+                key=f"tc_comments_{test_case_index}"
+            )
+        
+        test_steps = st.text_area(
+            "📋 Các bước kiểm thử",
+            value=test_case_dict.get('test_steps', ''),
+            height=150,
+            help="Nhập từng bước trên một dòng riêng biệt",
+            key=f"tc_steps_{test_case_index}"
+        )
+        
+        col_save, col_cancel = st.columns(2)
+        with col_save:
+            save_btn = st.form_submit_button("💾 Lưu thay đổi", type="primary")
+        with col_cancel:
+            cancel_btn = st.form_submit_button("❌ Hủy")
+        
+        if save_btn:
+            # Update test case with new values
+            updated_test_case = {
+                'test_case_id': test_case_id,
+                'test_title': test_title,
+                'description': description,
+                'preconditions': preconditions,
+                'test_steps': test_steps,
+                'test_data': test_data,
+                'expected_result': expected_result,
+                'comments': comments
+            }
+            
+            # Update in session state
+            try:
+                if 'generated_test_cases' in st.session_state:
+                    test_cases = st.session_state.generated_test_cases
+                    if test_case_index < len(test_cases):
+                        # Convert to dict if it's a TestCase object
+                        current_case = test_cases[test_case_index]
+                        
+                        # Check if it's a TestCase object (Pydantic model)
+                        if hasattr(current_case, 'model_dump') or hasattr(current_case, 'dict'):
+                            # It's a TestCase object, create new instance with updated data
+                            from tester_agent import TestCase
+                            test_cases[test_case_index] = TestCase(**updated_test_case)
+                        else:
+                            # It's already a dict, just update it
+                            test_cases[test_case_index] = updated_test_case
+                        
+                        st.session_state.generated_test_cases = test_cases
+                        
+                        # Clear editing state
+                        st.session_state.editing_test_case = None
+                        st.success("✅ Đã lưu thay đổi test case!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Test case index {test_case_index} không hợp lệ!")
+                else:
+                    st.error("❌ Không tìm thấy test cases trong session state!")
+            except Exception as e:
+                st.error(f"❌ Lỗi khi lưu test case: {str(e)}")
+                st.exception(e)
+        
+        if cancel_btn:
+            st.session_state.editing_test_case = None
+            st.rerun()
+
 # Router helpers (prefer stable API, fallback to experimental for old versions)
 
 def get_query_params() -> Dict[str, List[str]]:
@@ -88,6 +264,10 @@ if 'project_created' not in st.session_state:
     st.session_state.project_created = False
 if 'project_settings' not in st.session_state:
     st.session_state.project_settings = {}
+if 'editing_test_case' not in st.session_state:
+    st.session_state.editing_test_case = None
+if 'saved_test_cases' not in st.session_state:
+    st.session_state.saved_test_cases = {}
 
 # Page configuration
 st.set_page_config(page_title="AI Test Case Generator", page_icon="🧪", layout="wide")
@@ -123,6 +303,66 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     with col2:
         st.markdown("**Writing Style & Tone**")
         writing_style = st.text_area("Writing Style & Tone", height=80, value=defaults.get('writing_style', ''))
+        st.markdown("**🔗 Jira Integration**")
+        jira_project_key = st.text_input(
+            "Jira Project Key", 
+            value=defaults.get('jira_project_key', ''), 
+            help="Enter Jira Project Key (e.g., PROJ) for test case synchronization",
+            placeholder="PROJ"
+        )
+        
+        # Jira Credentials
+        with st.expander("🔐 Jira Credentials", expanded=False):
+            st.markdown("**Configure Jira server connection:**")
+            
+            col_jira1, col_jira2 = st.columns(2)
+            with col_jira1:
+                jira_server = st.text_input(
+                    "Jira Server URL",
+                    value=defaults.get('jira_server', ''),
+                    help="Enter your Jira server URL (e.g., https://yourcompany.atlassian.net)",
+                    placeholder="https://yourcompany.atlassian.net"
+                )
+                jira_username = st.text_input(
+                    "Username/Email",
+                    value=defaults.get('jira_username', ''),
+                    help="Enter your Jira username or email",
+                    placeholder="user@company.com"
+                )
+            
+            with col_jira2:
+                jira_password = st.text_input(
+                    "Password",
+                    value=defaults.get('jira_password', ''),
+                    type="password",
+                    help="Enter your Jira password or App Password"
+                )
+                st.markdown("")
+                st.markdown("")
+            
+            # Test connection button
+            col_test_conn = st.columns([1, 1, 1])
+            with col_test_conn[1]:
+                if st.button("🔍 Test Jira Connection", help="Test connection to Jira server"):
+                    if jira_server and jira_username and jira_password:
+                        from jira_sync import test_jira_connection
+                        with st.spinner("Testing Jira connection..."):
+                            if test_jira_connection(jira_server, jira_username, jira_password):
+                                st.success("✅ Jira connection successful!")
+                            else:
+                                st.error("❌ Jira connection failed!")
+                    else:
+                        st.warning("⚠️ Please fill in all Jira credentials first")
+            
+            # Xray Field Mapping
+            with st.expander("⚙️ Xray Field Mapping", expanded=False):
+                st.markdown("**Configure Xray custom field IDs:**")
+                
+                xray_test_steps_field = st.text_input(
+                    "Test Steps Field ID",
+                    value=defaults.get('xray_test_steps_field', 'customfield_11203'),
+                    help="Custom field ID cho Manual Test Steps (bao gồm cả Test Data)"
+                )
 
     st.markdown("---")
     st.markdown('<div class="section-header">🧪 Testing Configuration</div>', unsafe_allow_html=True)
@@ -199,6 +439,13 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                     'description': description,
                     'languages': languages,
                     'writing_style': writing_style,
+                    'jira_project_key': jira_project_key,
+                    # Jira Credentials
+                    'jira_server': jira_server,
+                    'jira_username': jira_username,
+                    'jira_password': jira_password,
+                    # Xray Field Mapping
+                    'xray_test_steps_field': xray_test_steps_field,
                     'detail_level': detail_level,
                     'testing_types': testing_types,
                     'priority_levels': {
@@ -271,9 +518,44 @@ def view_create_test_case(project_id: int | None):
         project = get_project(project_id)
         if project:
             st.session_state.project_settings = project.get('settings', {})
+        
+        # Auto-load saved test cases if none are currently loaded
+        if not st.session_state.get('generated_test_cases') and project_id:
+            saved_cases = load_test_cases(project_id)
+            if saved_cases:
+                # Convert back to TestCase objects if needed
+                from tester_agent import TestCase
+                loaded_test_cases = []
+                for case_dict in saved_cases:
+                    try:
+                        loaded_test_cases.append(TestCase(**case_dict))
+                    except:
+                        loaded_test_cases.append(case_dict)
+                st.session_state.generated_test_cases = loaded_test_cases
+                st.info(f"ℹ️ Đã tự động tải {len(loaded_test_cases)} test cases đã lưu cho project này")
+    
     settings = st.session_state.get('project_settings', {})
 
     st.markdown(f"# 🎯 Project: {settings.get('name', 'Unnamed Project')}")
+    
+    # Show usage instructions
+    with st.expander("ℹ️ Hướng dẫn sử dụng tính năng chỉnh sửa", expanded=False):
+        st.markdown("""
+        **✨ Tính năng mới: Chỉnh sửa và lưu trữ Test Cases**
+        
+        🎯 **Cách sử dụng:**
+        1. **Tạo test cases:** Nhập user story và nhấn "Generate Test Cases"
+        2. **Chỉnh sửa:** Nhấn nút "✏️ Chỉnh sửa" trên test case muốn sửa
+        3. **Lưu trữ:** Nhấn "💾 Lưu Test Cases" để lưu vào file
+        4. **Tải lại:** Nhấn "📂 Tải Test Cases" để tải test cases đã lưu
+        5. **Đồng bộ Jira:** Nhấn "🔗 Đồng bộ Jira" để tải test cases lên Jira
+        6. **Xuất file:** Sử dụng các nút Download để xuất Excel/CSV/JSON
+        
+        💡 **Lưu ý:** Test cases sẽ được tự động tải khi bạn vào lại project này
+        """)
+    
+    # Store current project key for Jira debug
+    st.session_state.current_project_key = settings.get('jira_project_key', '')
 
     # Test case generation interface
     st.markdown("## 🚀 Generate Test Cases")
@@ -330,8 +612,15 @@ def view_create_test_case(project_id: int | None):
     
     # Show different UI based on whether we have AI-generated content
     if default_story:
-        st.markdown("**🤖 AI-Generated User Story:**")
-        st.markdown("The user story below was generated from your specification document. You can edit it before generating test cases.")
+        # Check if it's Vietnamese content
+        is_vietnamese_content = any(keyword in default_story for keyword in ["Câu Chuyện Người Dùng", "Đặc Tả", "Tính năng", "Người dùng"])
+        
+        if is_vietnamese_content:
+            st.markdown("**🤖 Câu Chuyện Người Dùng Được Tạo Bởi AI:**")
+            st.markdown("Câu chuyện người dùng dưới đây được tạo từ tài liệu đặc tả của bạn. Bạn có thể chỉnh sửa trước khi tạo test case.")
+        else:
+            st.markdown("**🤖 AI-Generated User Story:**")
+            st.markdown("The user story below was generated from your specification document. You can edit it before generating test cases.")
         
         col_clear, col_edit = st.columns([1, 3])
         with col_clear:
@@ -339,44 +628,104 @@ def view_create_test_case(project_id: int | None):
                 st.session_state.generated_user_story = ""
                 st.rerun()
         with col_edit:
-            st.markdown("💡 *Edit the story below to customize it for your needs*")
+            if is_vietnamese_content:
+                st.markdown("💡 *Chỉnh sửa câu chuyện bên dưới để tùy chỉnh theo nhu cầu của bạn*")
+            else:
+                st.markdown("💡 *Edit the story below to customize it for your needs*")
+    
+    # Determine if we should show Vietnamese labels
+    is_vietnamese_content = any(keyword in default_story for keyword in ["Câu Chuyện Người Dùng", "Đặc Tả", "Tính năng", "Người dùng"]) if default_story else False
     
     user_story = st.text_area(
-        "📋 Enter User Story or Functionality Description:",
+        "📋 Enter User Story or Functionality Description:" if not is_vietnamese_content else "📋 Nhập Câu Chuyện Người Dùng hoặc Mô Tả Chức Năng:",
         height=250,
         value=default_story,
-        help="Describe the functionality you want to create test cases for. You can edit the AI-generated story above or write your own.",
-        placeholder="Example: As a user, I want to login to the system so that I can access my dashboard..."
+        help="Describe the functionality you want to create test cases for. You can edit the AI-generated story above or write your own." if not is_vietnamese_content else "Mô tả chức năng bạn muốn tạo test case. Bạn có thể chỉnh sửa câu chuyện được tạo bởi AI ở trên hoặc viết câu chuyện của riêng bạn.",
+        placeholder="Example: As a user, I want to login to the system so that I can access my dashboard..." if not is_vietnamese_content else "Ví dụ: Là một người dùng, tôi muốn đăng nhập vào hệ thống để có thể truy cập bảng điều khiển của mình..."
     )
     
     # Test case generation controls
     st.markdown("### 🎯 Test Case Generation")
-    col_gen = st.columns([2, 1, 1])
+    col_gen = st.columns([2, 1, 1, 1])
     with col_gen[0]:
         generate_btn = st.button("🎯 Generate Test Cases", type="primary", use_container_width=True)
     with col_gen[1]:
         num_cases = st.number_input("Max Cases", min_value=1, max_value=50, value=10)
     with col_gen[2]:
         export_format = st.selectbox("Export", ["Excel", "CSV", "JSON"])
+    with col_gen[3]:
+        if st.button("🗑️ Clear Cache", type="secondary", help="Clear all cached data and restart"):
+            st.session_state.clear()
+            st.rerun()
 
     if generate_btn:
         if user_story.strip():
             with st.spinner("🔄 Generating test cases with AI..."):
-                progress_bar = st.progress(0)
-                for i in range(100):
-                    progress_bar.progress(i + 1)
-                generated = generate_test_cases(
-                    user_story,
-                    int(num_cases),
-                    settings,
-                )
-                st.session_state.generated_test_cases = generated
+                try:
+                    # Clean up user story if it's too long or has formatting issues
+                    cleaned_story = user_story.strip()
+                    
+                    # If it's an AI-generated story with headers, extract the main content
+                    if cleaned_story.startswith("#"):
+                        lines = cleaned_story.split('\n')
+                        # Find the main content after headers
+                        main_content = []
+                        in_main_content = False
+                        for line in lines:
+                            if line.startswith("---") or line.startswith("**📄") or line.startswith("**💡") or line.startswith("**Tóm Tắt") or line.startswith("**Lưu Ý"):
+                                break
+                            if in_main_content or (line.strip() and not line.startswith("#")):
+                                in_main_content = True
+                                main_content.append(line)
+                        cleaned_story = '\n'.join(main_content).strip()
+                    
+                    # Extract key functionality from user story for better matching
+                    key_functionality = []
+                    lines = cleaned_story.split('\n')
+                    for line in lines:
+                        line = line.strip()
+                        if line and not line.startswith('#') and not line.startswith('**'):
+                            # Look for user actions and functionality
+                            if any(keyword in line.lower() for keyword in ['want', 'need', 'should', 'can', 'must', 'muốn', 'cần', 'có thể', 'phải', 'login', 'register', 'submit', 'click', 'enter', 'select']):
+                                key_functionality.append(line)
+                    
+                    # If we found key functionality, use it as context
+                    if key_functionality:
+                        cleaned_story = '\n'.join(key_functionality[:5])  # Take first 5 key points
+                        st.info("ℹ️ Extracted key functionality from user story for better test case generation.")
+                    
+                    # Limit story length to prevent API issues
+                    if len(cleaned_story) > 2000:
+                        cleaned_story = cleaned_story[:2000] + "..."
+                        st.info("ℹ️ User story was truncated to prevent API issues.")
+                    
+                    # Generate test cases with cache busting
+                    import time
+                    cache_buster = int(time.time())
+                    generated = generate_test_cases(
+                        f"{cleaned_story}\n\n[Cache Buster: {cache_buster}]",
+                        int(num_cases),
+                        settings,
+                    )
+                    
+                    if generated and len(generated) > 0:
+                        st.session_state.generated_test_cases = generated
+                        st.success(f"✅ Generated {len(generated)} test cases successfully!")
+                    else:
+                        st.error("❌ Failed to generate test cases. Please try again.")
+                        
+                except Exception as e:
+                    st.error(f"❌ Error generating test cases: {str(e)}")
+                    st.info("💡 Try shortening your user story or check your API key.")
         else:
             st.warning("⚠️ Please enter a user story to generate test cases.")
 
     test_cases = st.session_state.get('generated_test_cases', [])
     if test_cases:
         st.success(f"✅ Generated {len(test_cases)} test cases successfully!")
+        
+        # Lưu ý: Form chỉnh sửa được render inline bên trong từng expander để tránh trùng key
+        
         col_stats = st.columns(4)
         with col_stats[0]:
             st.metric("Total Cases", len(test_cases))
@@ -386,26 +735,110 @@ def view_create_test_case(project_id: int | None):
             st.metric("High Priority", len([tc for tc in test_cases if 'high' in str(tc.test_case_id).lower()]))
         with col_stats[3]:
             st.metric("Medium/Low", len(test_cases) - len([tc for tc in test_cases if 'critical' in str(tc.test_case_id).lower() or 'high' in str(tc.test_case_id).lower()]))
+        
+        # Add save/load controls
+        st.markdown("### 💾 Quản lý Test Cases")
+        col_save_load = st.columns([1, 1, 1, 1, 1])
+        with col_save_load[0]:
+            if st.button("💾 Lưu Test Cases", type="primary", help="Lưu test cases vào file"):
+                if project_id:
+                    # Convert test cases to dict format for saving
+                    test_cases_dict = [convert_test_case_to_dict(tc) for tc in test_cases]
+                    save_test_cases(project_id, test_cases_dict)
+                    st.success("✅ Đã lưu test cases thành công!")
+                else:
+                    st.error("❌ Không thể lưu: Project ID không hợp lệ")
+        
+        with col_save_load[1]:
+            if st.button("📂 Tải Test Cases", help="Tải test cases đã lưu"):
+                if project_id:
+                    saved_cases = load_test_cases(project_id)
+                    if saved_cases:
+                        # Convert back to TestCase objects if needed
+                        from tester_agent import TestCase
+                        loaded_test_cases = []
+                        for case_dict in saved_cases:
+                            try:
+                                loaded_test_cases.append(TestCase(**case_dict))
+                            except:
+                                loaded_test_cases.append(case_dict)
+                        st.session_state.generated_test_cases = loaded_test_cases
+                        st.success(f"✅ Đã tải {len(loaded_test_cases)} test cases!")
+                        st.rerun()
+                    else:
+                        st.info("ℹ️ Chưa có test cases nào được lưu cho project này")
+                else:
+                    st.error("❌ Không thể tải: Project ID không hợp lệ")
+        
+        with col_save_load[2]:
+            if st.button("🔗 Đồng bộ Jira", help="Đồng bộ test cases lên Jira"):
+                jira_project_key = settings.get('jira_project_key', '')
+                if jira_project_key:
+                    # Convert test cases to dict format for syncing
+                    test_cases_dict = [convert_test_case_to_dict(tc) for tc in test_cases]
+                    
+                    with st.spinner("🔄 Đang đồng bộ test cases lên Jira..."):
+                        result = sync_test_cases_to_jira(test_cases_dict, jira_project_key, settings)
+                        
+                        if result['success']:
+                            st.success(result['message'])
+                        else:
+                            st.error(result['message'])
+                else:
+                    st.error("❌ Jira Project Key chưa được cấu hình. Vui lòng cấu hình trong project settings.")
+        
+        with col_save_load[3]:
+            if st.button("🗑️ Xóa tất cả", help="Xóa tất cả test cases"):
+                st.session_state.generated_test_cases = []
+                st.session_state.editing_test_case = None
+                st.success("✅ Đã xóa tất cả test cases!")
+                st.rerun()
+        
+        with col_save_load[4]:
+            if st.button("🔄 Làm mới", help="Làm mới trang"):
+                st.rerun()
+        
         st.markdown("---")
+        
+        # Display test cases with edit buttons
         for i, case in enumerate(test_cases, 1):
             priority_colors = {'critical': '🔴','high': '🟠','medium': '🟢','low': '🔵'}
             priority_icon = '🧪'
+            
+            # Convert case to dict for display
+            case_dict = convert_test_case_to_dict(case)
+            
+            # Check priority based on test_case_id
+            test_case_id_str = str(case_dict.get('test_case_id', ''))
             for priority, icon in priority_colors.items():
-                if priority in str(case.test_case_id).lower():
+                if priority in test_case_id_str.lower():
                     priority_icon = icon
                     break
-            with st.expander(f"{priority_icon} Test Case {i}: {case.test_title}", expanded=False):
-                col_case1, col_case2 = st.columns([1, 1])
-                with col_case1:
-                    st.markdown(f"**🆔 ID:** `{case.test_case_id}`")
-                    st.markdown(f"**📝 Description:** {case.description}")
-                    st.markdown(f"**⚙️ Preconditions:** {case.preconditions}")
-                with col_case2:
-                    st.markdown(f"**📊 Test Data:** {case.test_data}")
-                    st.markdown(f"**✅ Expected Result:** {case.expected_result}")
-                    st.markdown(f"**💬 Comments:** {case.comments}")
-                st.markdown("**📋 Test Steps:**")
-                st.info(case.test_steps)
+            
+            with st.expander(f"{priority_icon} Test Case {i}: {case_dict.get('test_title', 'Untitled')}", expanded=False):
+                # If this is the one being edited, render the editor inline
+                index_zero_based = i - 1
+                if st.session_state.get('editing_test_case') == index_zero_based:
+                    # Dùng key form duy nhất theo project + index để tránh trùng
+                    with st.container():
+                        render_test_case_editor(case_dict, index_zero_based, project_id)
+                else:
+                    col_case1, col_case2, col_case3 = st.columns([2, 2, 1])
+                    with col_case1:
+                        st.markdown(f"**🆔 ID:** `{case_dict.get('test_case_id', i)}`")
+                        st.markdown(f"**📝 Description:** {case_dict.get('description', '')}")
+                        st.markdown(f"**⚙️ Preconditions:** {case_dict.get('preconditions', '')}")
+                    with col_case2:
+                        st.markdown(f"**📊 Test Data:** {case_dict.get('test_data', '')}")
+                        st.markdown(f"**✅ Expected Result:** {case_dict.get('expected_result', '')}")
+                        st.markdown(f"**💬 Comments:** {case_dict.get('comments', '')}")
+                    with col_case3:
+                        if st.button("✏️ Chỉnh sửa", key=f"edit_btn_{i-1}", help="Chỉnh sửa test case này"):
+                            st.session_state.editing_test_case = index_zero_based
+                            st.rerun()
+                    
+                    st.markdown("**📋 Test Steps:**")
+                    st.info(case_dict.get('test_steps', ''))
         st.markdown("---")
         col_export = st.columns([1, 2, 1])
         with col_export[1]:
@@ -421,7 +854,7 @@ def view_create_test_case(project_id: int | None):
                     )
                 elif export_format == "CSV":
                     import pandas as pd
-                    rows = [tc.dict() if hasattr(tc, "dict") else dict(tc) for tc in test_cases]
+                    rows = [convert_test_case_to_dict(tc) for tc in test_cases]
                     csv_data = pd.DataFrame(rows).to_csv(index=False).encode("utf-8")
                     st.download_button(
                         label="📥 Download CSV",
@@ -431,7 +864,7 @@ def view_create_test_case(project_id: int | None):
                         use_container_width=True,
                     )
                 else:
-                    rows = [tc.dict() if hasattr(tc, "dict") else dict(tc) for tc in test_cases]
+                    rows = [convert_test_case_to_dict(tc) for tc in test_cases]
                     json_data = json.dumps(rows, ensure_ascii=False, indent=2).encode("utf-8")
                     st.download_button(
                         label="📥 Download JSON",

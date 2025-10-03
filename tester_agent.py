@@ -91,19 +91,28 @@ class State(TypedDict):
 load_dotenv()
 
 # Initialize the LLM (slightly higher temperature for diversity)
-llm = ChatGroq(
-    model="llama-3.1-8b-instant",
-    temperature=0.4,
-    max_tokens=4000,
-    timeout=None,
-    max_retries=2,
-)
+def get_llm():
+    """Get LLM instance with proper error handling"""
+    try:
+        return ChatGroq(
+            model="llama-3.1-8b-instant",
+            temperature=0.4,
+            max_tokens=4000,
+            timeout=None,
+            max_retries=2,
+        )
+    except Exception as e:
+        print(f"Warning: Could not initialize Groq LLM: {e}")
+        print("Please set GROQ_API_KEY environment variable")
+        return None
 
 # Try preparing a structured LLM for OutputSchema when available
 structured_llm = None
 try:
     # Newer langchain-groq supports structured output via Pydantic
-    structured_llm = llm.with_structured_output(OutputSchema)
+    llm_instance = get_llm()
+    if llm_instance:
+        structured_llm = llm_instance.with_structured_output(OutputSchema)
 except Exception:
     structured_llm = None
 
@@ -264,11 +273,19 @@ VIETNAMESE TEST STEPS EXAMPLES:
         f"{vietnamese_header}"
         f"{language_instruction}\n\n"
         f"{GENERATOR_PROMPT}\n\n"
-        f"Here is the user story:\n\n{state['user_story']}\n\n"
+        f"CRITICAL: You must create test cases that DIRECTLY MATCH and test the functionality described in the user story below.\n\n"
+        f"USER STORY TO TEST:\n{state['user_story']}\n\n"
+        f"ANALYSIS REQUIREMENTS:\n"
+        f"1. Read the user story carefully and identify the main functionality being described\n"
+        f"2. Extract the specific user actions, inputs, and expected outcomes mentioned\n"
+        f"3. Identify the UI components, fields, and buttons that will be involved\n"
+        f"4. Create test cases that cover the exact scenarios described in the user story\n"
+        f"5. Ensure each test case directly relates to the functionality in the user story\n\n"
         f"{context_note}\n\n"
         f"{language_instruction}\n\n"
-        f"Generate up to {target_num} diverse, non-duplicated test cases distributed across the selected testing types. "
-        f"Include positive, negative, boundary, and edge scenarios. Vary inputs, preconditions, and expected outcomes. "
+        f"Generate up to {target_num} test cases that DIRECTLY TEST the functionality described in the user story above. "
+        f"Each test case must be relevant to the user story and test specific aspects of the described functionality. "
+        f"Include positive scenarios (happy path), negative scenarios (error cases), and edge cases based on the user story. "
         f"ORGANIZE TEST CASES BY UI FIELDS/COMPONENTS: Group test cases by specific fields, buttons, or UI elements mentioned in the user story. "
         f"STRICT FORMAT: test_title must be EXACTLY the field/component name only. "
         f"NO additional text in test_title. description should contain the detailed summary of what is being tested for that field. "
@@ -287,7 +304,11 @@ VIETNAMESE TEST STEPS EXAMPLES:
     
     try:
         # Use text mode with robust JSON extraction for better compatibility
-        response = llm.invoke(prompt)
+        llm_instance = get_llm()
+        if not llm_instance:
+            raise Exception("LLM not available. Please set GROQ_API_KEY environment variable.")
+        
+        response = llm_instance.invoke(prompt)
         response_text = response.content
         
         # AGGRESSIVE VIETNAMESE ENFORCEMENT: If Vietnamese is selected, force translation
@@ -490,9 +511,9 @@ VIETNAMESE TEST STEPS EXAMPLES:
                         test_title="Trường Email",
                         description="Kiểm tra định dạng email hợp lệ",
                         preconditions="Người dùng đã mở trang đăng nhập",
-                        test_steps="1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhấp nút đăng nhập\n4. Xác minh đăng nhập thành công",
+                        test_steps="1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email (test@example.com)\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
                         test_data="test@example.com",
-                        expected_result="Hệ thống chấp nhận email và cho phép đăng nhập",
+                        expected_result="Hệ thống chấp nhận email và cho phép đăng nhập thành công",
                         comments="Kiểm tra trường hợp email hợp lệ"
                     ),
                     TestCase(
@@ -500,9 +521,9 @@ VIETNAMESE TEST STEPS EXAMPLES:
                         test_title="Trường Mật khẩu",
                         description="Kiểm tra xác thực mật khẩu",
                         preconditions="Người dùng đã mở trang đăng nhập",
-                        test_steps="1. Mở trang đăng nhập\n2. Nhập mật khẩu hợp lệ\n3. Nhấp nút đăng nhập\n4. Xác minh đăng nhập thành công",
+                        test_steps="1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu (matkhau123)\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
                         test_data="matkhau123",
-                        expected_result="Hệ thống chấp nhận mật khẩu và cho phép đăng nhập",
+                        expected_result="Hệ thống chấp nhận mật khẩu và cho phép đăng nhập thành công",
                         comments="Kiểm tra trường hợp mật khẩu hợp lệ"
                     ),
                     TestCase(
@@ -510,7 +531,7 @@ VIETNAMESE TEST STEPS EXAMPLES:
                         test_title="Nút Đăng nhập",
                         description="Kiểm tra chức năng nút đăng nhập",
                         preconditions="Người dùng đã nhập email và mật khẩu",
-                        test_steps="1. Nhập email hợp lệ\n2. Nhập mật khẩu hợp lệ\n3. Nhấp nút đăng nhập\n4. Xác minh đăng nhập thành công",
+                        test_steps="1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển hướng đến trang chủ",
                         test_data="test@example.com, matkhau123",
                         expected_result="Hệ thống xử lý đăng nhập và chuyển hướng đến trang chủ",
                         comments="Kiểm tra chức năng đăng nhập cơ bản"
@@ -523,9 +544,9 @@ VIETNAMESE TEST STEPS EXAMPLES:
                         test_title="Email Field",
                         description="Test valid email format",
                         preconditions="User has opened login page",
-                        test_steps="1. Open login page\n2. Enter valid email\n3. Click login button\n4. Verify login success",
+                        test_steps="1. Open login page\n2. Enter valid email in email field (test@example.com)\n3. Enter valid password in password field\n4. Click login button\n5. Verify successful login and redirect to dashboard",
                         test_data="test@example.com",
-                        expected_result="System accepts email and allows login",
+                        expected_result="System accepts email and allows successful login",
                         comments="Test valid email case"
                     )
                 ]
@@ -541,13 +562,51 @@ VIETNAMESE TEST STEPS EXAMPLES:
         print(f"Error parsing response: {e}")
         # Return diversified fallback test cases (multiple)
         fallback_count = max(3, target_num)
-        archetypes = [
-            ("Positive Flow", "Valid inputs and expected happy-path behavior", "User follows the main flow successfully", "Valid set of inputs", "System returns success and correct data"),
-            ("Negative Credentials", "Invalid or missing credentials/permissions", "Attempt action without proper permissions", "Invalid token/role/empty fields", "System denies action with proper error message"),
-            ("Boundary Values", "Min/Max boundary and off-by-one inputs", "Use boundary and just-outside values", "Boundary and extreme inputs", "System handles boundaries without errors"),
-            ("Error Handling", "Network or server-side error handling", "Simulate failure and retry paths", "Injected failures/timeouts", "Graceful error and recovery where applicable"),
-            ("Data Validation", "Incorrect data format and constraint violations", "Submit malformed/constraint-breaking data", "Wrong formats/nulls/oversized", "Validation messages shown, no data corruption"),
-        ]
+        
+        # Check if Vietnamese is selected for fallback cases
+        project_settings = state.get('project_settings', {})
+        languages = project_settings.get("languages", [])
+        is_vietnamese = "Vietnamese" in languages or "Tiếng Việt" in languages
+        
+        if is_vietnamese:
+            # Vietnamese fallback test cases with detailed steps
+            archetypes = [
+                ("Luồng Tích Cực", "Kiểm tra chức năng với dữ liệu hợp lệ và hành vi mong đợi", 
+                 "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ", 
+                 "test@example.com, matkhau123", "Hệ thống trả về thành công và dữ liệu chính xác"),
+                ("Thông Tin Xác Thực Không Hợp Lệ", "Kiểm tra với thông tin xác thực không hợp lệ hoặc thiếu quyền", 
+                 "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu sai\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi hiển thị", 
+                 "email_sai@test.com, matkhau_sai", "Hệ thống từ chối hành động với thông báo lỗi phù hợp"),
+                ("Giá Trị Biên", "Kiểm tra giá trị biên tối thiểu/tối đa và đầu vào ngoài phạm vi", 
+                 "1. Mở trang đăng nhập\n2. Nhập email với độ dài tối đa\n3. Nhập mật khẩu với độ dài tối thiểu\n4. Nhấp nút đăng nhập\n5. Xác minh hệ thống xử lý đúng", 
+                 "email_rat_dai@test.com, 123", "Hệ thống xử lý biên mà không có lỗi"),
+                ("Xử Lý Lỗi", "Xử lý lỗi mạng hoặc phía máy chủ", 
+                 "1. Mở trang đăng nhập\n2. Nhập thông tin hợp lệ\n3. Ngắt kết nối mạng\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi kết nối", 
+                 "test@example.com, matkhau123", "Lỗi nhẹ nhàng và phục hồi khi có thể"),
+                ("Xác Thực Dữ Liệu", "Định dạng dữ liệu không chính xác và vi phạm ràng buộc", 
+                 "1. Mở trang đăng nhập\n2. Nhập email sai định dạng\n3. Nhập mật khẩu với ký tự đặc biệt\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi định dạng", 
+                 "email_khong_hop_le, matkhau@#$%", "Hiển thị thông báo xác thực, không làm hỏng dữ liệu"),
+            ]
+        else:
+            # English fallback test cases with detailed steps
+            archetypes = [
+                ("Positive Flow", "Valid inputs and expected happy-path behavior", 
+                 "1. Open login page\n2. Enter valid email in email field\n3. Enter valid password in password field\n4. Click login button\n5. Verify successful login and redirect to dashboard", 
+                 "test@example.com, password123", "System returns success and correct data"),
+                ("Negative Credentials", "Invalid or missing credentials/permissions", 
+                 "1. Open login page\n2. Enter invalid email\n3. Enter wrong password\n4. Click login button\n5. Verify error message is displayed", 
+                 "wrong@test.com, wrongpass", "System denies action with proper error message"),
+                ("Boundary Values", "Min/Max boundary and off-by-one inputs", 
+                 "1. Open login page\n2. Enter email with maximum length\n3. Enter password with minimum length\n4. Click login button\n5. Verify system handles correctly", 
+                 "very_long_email@test.com, 123", "System handles boundaries without errors"),
+                ("Error Handling", "Network or server-side error handling", 
+                 "1. Open login page\n2. Enter valid credentials\n3. Disconnect network\n4. Click login button\n5. Verify connection error message", 
+                 "test@example.com, password123", "Graceful error and recovery where applicable"),
+                ("Data Validation", "Incorrect data format and constraint violations", 
+                 "1. Open login page\n2. Enter malformed email\n3. Enter password with special characters\n4. Click login button\n5. Verify format error message", 
+                 "invalid_email_format, pass@#$%", "Validation messages shown, no data corruption"),
+            ]
+        
         fallback_cases: List[TestCase] = []
         for i in range(1, fallback_count + 1):
             kind = archetypes[(i - 1) % len(archetypes)]
@@ -556,11 +615,11 @@ VIETNAMESE TEST STEPS EXAMPLES:
                     test_case_id=i,
                     test_title=f"{kind[0]} Scenario #{i}",
                     description=kind[1],
-                    preconditions="System operational; environment configured as per project settings",
+                    preconditions="System operational; environment configured as per project settings" if not is_vietnamese else "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
                     test_steps=kind[2],
                     test_data=kind[3],
                     expected_result=kind[4],
-                    comments="Fallback generated due to parsing/model error"
+                    comments="Fallback generated due to parsing/model error" if not is_vietnamese else "Được tạo tự động do lỗi phân tích/mô hình"
                 )
             )
         return {"test_cases": fallback_cases}
@@ -571,6 +630,50 @@ graph_builder.add_node("generator", test_cases_generator)
 graph_builder.set_entry_point("generator")
 graph_builder.set_finish_point("generator")
 graph = graph_builder.compile()
+
+def validate_test_cases_match_user_story(test_cases: List[TestCase], user_story: str) -> List[TestCase]:
+    """
+    Validate that test cases match the user story and improve them if needed
+    """
+    if not test_cases or not user_story:
+        return test_cases
+    
+    # Extract key terms from user story
+    user_story_lower = user_story.lower()
+    key_terms = []
+    
+    # Look for common functionality keywords
+    functionality_keywords = [
+        'login', 'register', 'submit', 'click', 'enter', 'select', 'upload', 'download',
+        'search', 'filter', 'sort', 'delete', 'edit', 'save', 'cancel', 'confirm',
+        'đăng nhập', 'đăng ký', 'gửi', 'nhấp', 'nhập', 'chọn', 'tải lên', 'tải xuống',
+        'tìm kiếm', 'lọc', 'sắp xếp', 'xóa', 'chỉnh sửa', 'lưu', 'hủy', 'xác nhận'
+    ]
+    
+    for keyword in functionality_keywords:
+        if keyword in user_story_lower:
+            key_terms.append(keyword)
+    
+    # If we found key terms, ensure test cases cover them
+    if key_terms:
+        improved_cases = []
+        for case in test_cases:
+            # Check if test case covers any key functionality
+            case_text = f"{case.test_title} {case.description} {case.test_steps}".lower()
+            if any(term in case_text for term in key_terms):
+                improved_cases.append(case)
+            else:
+                # Try to improve the test case to match user story
+                if 'login' in key_terms and 'đăng nhập' not in case_text:
+                    case.test_title = "Trường Email" if "email" in case_text else case.test_title
+                    case.description = f"Kiểm tra chức năng đăng nhập - {case.description}"
+                    improved_cases.append(case)
+                else:
+                    improved_cases.append(case)
+        
+        return improved_cases
+    
+    return test_cases
 
 def generate_test_cases(user_input: str, num_cases: int = 10, project_settings: Dict[str, Any] | None = None) -> List[TestCase]:
     """
@@ -585,13 +688,27 @@ def generate_test_cases(user_input: str, num_cases: int = 10, project_settings: 
         List of TestCase objects
     """
     try:
+        # Remove cache buster from user input if present
+        clean_input = user_input
+        if "[Cache Buster:" in user_input:
+            clean_input = user_input.split("[Cache Buster:")[0].strip()
+        
+        print(f"🔄 Generating test cases for: {clean_input[:100]}...")
+        
         result = graph.invoke({
             "test_cases": [],
-            "user_story": user_input,
+            "user_story": clean_input,
             "num_cases": int(num_cases),
             "project_settings": project_settings or {},
         })
-        return result.get("test_cases", [])
+        
+        test_cases = result.get("test_cases", [])
+        
+        # Validate and improve test cases to match user story
+        improved_cases = validate_test_cases_match_user_story(test_cases, clean_input)
+        
+        print(f"✅ Generated {len(improved_cases)} test cases successfully!")
+        return improved_cases
     except Exception as e:
         print(f"Error generating test cases: {e}")
         return []

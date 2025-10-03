@@ -3,6 +3,30 @@ import pandas as pd
 from io import BytesIO
 import re
 
+def convert_test_case_to_dict(test_case) -> dict:
+    """Convert TestCase object to dictionary"""
+    # Suppress all Pydantic deprecation warnings
+    import warnings
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=DeprecationWarning)
+        
+        try:
+            # Prefer Pydantic v2 API when available
+            if hasattr(test_case, 'model_dump'):
+                return test_case.model_dump()
+            elif hasattr(test_case, 'dict'):
+                return test_case.dict()
+            elif hasattr(test_case, '__dict__'):
+                return test_case.__dict__
+            else:
+                return dict(test_case)
+        except Exception as e:
+            # Fallback to basic conversion if all else fails
+            if hasattr(test_case, '__dict__'):
+                return test_case.__dict__
+            else:
+                return {}
+
 def format_test_steps(test_steps: str) -> str:
     """
     Format test steps with numbered list and line breaks.
@@ -80,7 +104,7 @@ def export_to_excel(test_cases, path: str = "test_cases.xlsx"):
     rows = []
     for tc in test_cases:
         if hasattr(tc, "dict"):
-            row = tc.dict()
+            row = convert_test_case_to_dict(tc)
         else:
             row = dict(tc)
         
@@ -102,7 +126,7 @@ def export_to_excel_bytes(test_cases) -> bytes:
     rows = []
     for tc in test_cases:
         if hasattr(tc, "dict"):
-            row = tc.dict()
+            row = convert_test_case_to_dict(tc)
         else:
             row = dict(tc)
         

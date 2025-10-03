@@ -8,11 +8,21 @@
         "Vietnamese"
       ],
       "writing_style": "",
+      "jira_project_key": "LT",
+      "jira_server": "http://10.101.0.217:8080/",
+      "jira_username": "luctv",
+      "jira_password": "luctv",
+      "xray_test_steps_field": "customfield_11203",
       "detail_level": "",
       "testing_types": [
         "UI Testing",
         "Functional Testing",
-        "Data Validation Testing"
+        "Data Validation Testing",
+        "Security Testing",
+        "Performance Testing",
+        "Accessibility Testing",
+        "API/Integration Testing",
+        "Responsive Testing"
       ],
       "priority_levels": {
         "critical": "",

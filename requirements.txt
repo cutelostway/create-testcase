@@ -8,3 +8,4 @@ openpyxl
 python-docx
 PyPDF2
 pypdf
+jira
