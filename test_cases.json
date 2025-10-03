@@ -1,24 +1,104 @@
 {
   "1": [
     {
+      "test_case_id": 1,
+      "test_title": "Luồng Tích Cực Scenario #1",
+      "description": "Kiểm tra chức năng với dữ liệu hợp lệ và hành vi mong đợi",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống trả về thành công và dữ liệu chính xác",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
       "test_case_id": 2,
-      "test_title": "Trường Mật khẩu",
-      "description": "Kiểm tra xác thực mật khẩu",
-      "preconditions": "Người dùng đã mở trang đăng nhập",
-      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu (matkhau123)\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
-      "test_data": "matkhau123",
-      "expected_result": "Hệ thống chấp nhận mật khẩu và cho phép đăng nhập thành công",
-      "comments": "Kiểm tra trường hợp mật khẩu hợp lệ"
+      "test_title": "Thông Tin Xác Thực Không Hợp Lệ Scenario #2",
+      "description": "Kiểm tra với thông tin xác thực không hợp lệ hoặc thiếu quyền",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu sai\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi hiển thị",
+      "test_data": "email_sai@test.com, matkhau_sai",
+      "expected_result": "Hệ thống từ chối hành động với thông báo lỗi phù hợp",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
     },
     {
       "test_case_id": 3,
-      "test_title": "Nút Đăng nhập",
-      "description": "Kiểm tra chức năng nút đăng nhập",
-      "preconditions": "Người dùng đã nhập email và mật khẩu",
-      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển hướng đến trang chủ",
+      "test_title": "Giá Trị Biên Scenario #3",
+      "description": "Kiểm tra giá trị biên tối thiểu/tối đa và đầu vào ngoài phạm vi",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email với độ dài tối đa\n3. Nhập mật khẩu với độ dài tối thiểu\n4. Nhấp nút đăng nhập\n5. Xác minh hệ thống xử lý đúng",
+      "test_data": "email_rat_dai@test.com, 123",
+      "expected_result": "Hệ thống xử lý biên mà không có lỗi",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 4,
+      "test_title": "Xử Lý Lỗi Scenario #4",
+      "description": "Xử lý lỗi mạng hoặc phía máy chủ",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập thông tin hợp lệ\n3. Ngắt kết nối mạng\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi kết nối",
       "test_data": "test@example.com, matkhau123",
-      "expected_result": "Hệ thống xử lý đăng nhập và chuyển hướng đến trang chủ",
-      "comments": "Kiểm tra chức năng đăng nhập cơ bản"
+      "expected_result": "Lỗi nhẹ nhàng và phục hồi khi có thể",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 5,
+      "test_title": "Xác Thực Dữ Liệu Scenario #5",
+      "description": "Định dạng dữ liệu không chính xác và vi phạm ràng buộc",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email sai định dạng\n3. Nhập mật khẩu với ký tự đặc biệt\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi định dạng",
+      "test_data": "email_khong_hop_le, matkhau@#$%",
+      "expected_result": "Hiển thị thông báo xác thực, không làm hỏng dữ liệu",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 6,
+      "test_title": "Luồng Tích Cực Scenario #6",
+      "description": "Kiểm tra chức năng với dữ liệu hợp lệ và hành vi mong đợi",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống trả về thành công và dữ liệu chính xác",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 7,
+      "test_title": "Thông Tin Xác Thực Không Hợp Lệ Scenario #7",
+      "description": "Kiểm tra với thông tin xác thực không hợp lệ hoặc thiếu quyền",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu sai\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi hiển thị",
+      "test_data": "email_sai@test.com, matkhau_sai",
+      "expected_result": "Hệ thống từ chối hành động với thông báo lỗi phù hợp",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 8,
+      "test_title": "Giá Trị Biên Scenario #8",
+      "description": "Kiểm tra giá trị biên tối thiểu/tối đa và đầu vào ngoài phạm vi",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email với độ dài tối đa\n3. Nhập mật khẩu với độ dài tối thiểu\n4. Nhấp nút đăng nhập\n5. Xác minh hệ thống xử lý đúng",
+      "test_data": "email_rat_dai@test.com, 123",
+      "expected_result": "Hệ thống xử lý biên mà không có lỗi",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 9,
+      "test_title": "Xử Lý Lỗi Scenario #9",
+      "description": "Xử lý lỗi mạng hoặc phía máy chủ",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập thông tin hợp lệ\n3. Ngắt kết nối mạng\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi kết nối",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Lỗi nhẹ nhàng và phục hồi khi có thể",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
+    },
+    {
+      "test_case_id": 10,
+      "test_title": "Xác Thực Dữ Liệu Scenario #10",
+      "description": "Định dạng dữ liệu không chính xác và vi phạm ràng buộc",
+      "preconditions": "Hệ thống hoạt động; môi trường được cấu hình theo cài đặt dự án",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email sai định dạng\n3. Nhập mật khẩu với ký tự đặc biệt\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi định dạng",
+      "test_data": "email_khong_hop_le, matkhau@#$%",
+      "expected_result": "Hiển thị thông báo xác thực, không làm hỏng dữ liệu",
+      "comments": "Được tạo tự động do lỗi phân tích/mô hình"
     }
   ]
 }

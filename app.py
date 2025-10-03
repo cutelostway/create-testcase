@@ -921,12 +921,22 @@ def view_create_test_case(project_id: int | None):
         with col_export[1]:
             try:
                 if export_format == "Excel":
-                    data = export_to_excel_bytes(test_cases)
+                    # Sử dụng template_updater thay vì export_to_excel_bytes
+                    from template_updater import update_template_with_values
+                    data = update_template_with_values(settings, test_cases)
+                    
+                    # Tạo tên file theo format: {tên project}_Testcase_v1.0.xlsm
+                    project_name = settings.get('name', 'Project')
+                    # Làm sạch tên project (loại bỏ ký tự không hợp lệ cho tên file)
+                    import re
+                    clean_project_name = re.sub(r'[<>:"/\\|?*]', '_', project_name)
+                    file_name = f"{clean_project_name}_Testcase_v1.0.xlsm"
+                    
                     st.download_button(
                         label="📥 Download Excel",
                         data=data,
-                        file_name="test_cases.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        file_name=file_name,
+                        mime="application/vnd.ms-excel.sheet.macroEnabled.12",
                         use_container_width=True,
                     )
                 elif export_format == "CSV":
