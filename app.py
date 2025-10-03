@@ -302,6 +302,8 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     # Prefill values
     defaults = project.get('settings', {}) if (project and project.get('settings')) else {}
 
+    # 1. Project Information Section
+    st.markdown('<div class="section-header">📋 Project Information</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         project_name = st.text_input("Project Name *", value=defaults.get('name', ''), help="Enter project name (required)")
@@ -311,9 +313,13 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
             options=["Vietnamese", "English", "Chinese", "Japanese", "French", "Spanish", "German"],
             default=defaults.get('languages', ['English']),
         )
+        environment = st.multiselect(
+            "Environment *",
+            options=["Chrome", "Edge", "Firefox", "Windows", "iOS", "Android", "MacOS"],
+            default=defaults.get('environment', ['Chrome']),
+            help="Select testing environments (required)"
+        )
     with col2:
-        st.markdown("**Writing Style & Tone**")
-        writing_style = st.text_area("Writing Style & Tone", height=80, value=defaults.get('writing_style', ''))
         st.markdown("**🔗 Jira Integration**")
         jira_project_key = st.text_input(
             "Jira Project Key", 
@@ -376,6 +382,7 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                 )
 
     st.markdown("---")
+    # 2. Testing Configuration Section
     st.markdown('<div class="section-header">🧪 Testing Configuration</div>', unsafe_allow_html=True)
     col3, col4 = st.columns(2)
     with col3:
@@ -391,36 +398,48 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
             ("🔗 API/Integration Testing", "API/Integration Testing"),
             ("📱 Responsive Testing", "Responsive Testing")
         ]
-        defaults_testing = set(defaults.get('testing_types', ['Functional Testing']))
+        # Default select all testing types
+        defaults_testing = set(defaults.get('testing_types', ['UI Testing', 'Functional Testing', 'Data Validation Testing', 'Security Testing', 'Performance Testing', 'Accessibility Testing', 'API/Integration Testing', 'Responsive Testing']))
         for display_name, value in test_options:
             if st.checkbox(display_name, value=(value in defaults_testing)):
                 testing_types.append(value)
     with col4:
-        st.markdown("**Checklist Setting - Detail Level**")
-        detail_level = st.text_area("Detail Level", height=80, value=defaults.get('detail_level', ''))
         st.markdown("**Test Steps Detail Level**")
         steps_options = [
             "🔍 Low Detail - Key actions & results only",
             "⚖️ Medium Detail - Balanced main actions & outcomes",
             "📋 High Detail - Comprehensive step-by-step",
         ]
-        steps_default = defaults.get('steps_detail', steps_options[1])
-        steps_detail = st.radio("Select detail level:", options=steps_options, index=steps_options.index(steps_default) if steps_default in steps_options else 1)
+        steps_default = defaults.get('steps_detail', steps_options[2])
+        steps_detail = st.radio("Select detail level:", options=steps_options, index=steps_options.index(steps_default) if steps_default in steps_options else 2)
 
     st.markdown("---")
+    # 3. Priority Configuration Section
     st.markdown('<div class="section-header">🎯 Priority Configuration</div>', unsafe_allow_html=True)
     priority_cols = st.columns(4)
     priorities = defaults.get('priority_levels', {})
+    
+    # Default priority descriptions
+    default_priorities = {
+        'critical': 'System crashes, data loss, security vulnerabilities, core functionality broken',
+        'high': 'Major features not working, significant performance issues, important bugs',
+        'medium': 'Minor features affected, cosmetic issues, non-critical bugs',
+        'low': 'Enhancement requests, minor UI improvements, nice-to-have features'
+    }
+    
+    # Get project ID safely
+    project_id = project.get('id', 'new') if project else 'new'
+    
     with priority_cols[0]:
-        critical_priority = st.text_area("🔴 Critical Priority", height=80, value=priorities.get('critical', ''))
+        critical_priority = st.text_area("🔴 Critical Priority", height=80, value=priorities.get('critical', default_priorities['critical']), key=f"critical_priority_{project_id}")
     with priority_cols[1]:
-        high_priority = st.text_area("🟠 High Priority", height=80, value=priorities.get('high', ''))
+        high_priority = st.text_area("🟠 High Priority", height=80, value=priorities.get('high', default_priorities['high']), key=f"high_priority_{project_id}")
     with priority_cols[2]:
-        medium_priority = st.text_area("🟢 Medium Priority", height=80, value=priorities.get('medium', ''))
+        medium_priority = st.text_area("🟢 Medium Priority", height=80, value=priorities.get('medium', default_priorities['medium']), key=f"medium_priority_{project_id}")
     with priority_cols[3]:
-        low_priority = st.text_area("🔵 Low Priority", height=80, value=priorities.get('low', ''))
-
+        low_priority = st.text_area("🔵 Low Priority", height=80, value=priorities.get('low', default_priorities['low']), key=f"low_priority_{project_id}")
     st.markdown("---")
+    # 4. Exclusion Rules Section
     st.markdown('<div class="section-header">🚫 Exclusion Rules</div>', unsafe_allow_html=True)
     exclusion_options = [
         ("🖼️ Skip Common UI Sections", "Skip Common UI Sections"),
@@ -444,12 +463,12 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     btn_label = "💾 Save Project" if is_edit else "✅ Create Project"
     with col_submit[0]:
         if st.button(btn_label, type="primary"):
-            if project_name.strip():
+            if project_name.strip() and environment:
                 settings = {
                     'name': project_name,
                     'description': description,
                     'languages': languages,
-                    'writing_style': writing_style,
+                    'environment': environment,
                     'jira_project_key': jira_project_key,
                     # Jira Credentials
                     'jira_server': jira_server,
@@ -457,7 +476,6 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                     'jira_password': jira_password,
                     # Xray Field Mapping
                     'xray_test_steps_field': xray_test_steps_field,
-                    'detail_level': detail_level,
                     'testing_types': testing_types,
                     'priority_levels': {
                         'critical': critical_priority,
@@ -474,7 +492,10 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                 st.session_state.project_created = True
                 go_to('create-test-case', saved['id'])
             else:
-                st.error("❗ Project name is required!")
+                if not project_name.strip():
+                    st.error("❗ Project name is required!")
+                elif not environment:
+                    st.error("❗ Environment is required!")
     with col_submit[1]:
         if st.button("❌ Cancel"):
             go_to('home')
@@ -660,7 +681,7 @@ def view_create_test_case(project_id: int | None):
     
     # Test case generation controls
     st.markdown("### 🎯 Test Case Generation")
-    col_gen = st.columns([2, 1, 1, 1])
+    col_gen = st.columns([2, 1, 1, 0.8])
     with col_gen[0]:
         generate_btn = st.button("🎯 Generate Test Cases", type="primary", use_container_width=True)
     with col_gen[1]:
@@ -668,7 +689,7 @@ def view_create_test_case(project_id: int | None):
     with col_gen[2]:
         export_format = st.selectbox("Export", ["Excel", "CSV", "JSON"])
     with col_gen[3]:
-        if st.button("🗑️ Clear Cache", type="secondary", help="Clear all cached data and restart"):
+        if st.button("🗑️ Clear Cache", type="secondary", use_container_width=True, help="Clear all cached data and restart"):
             st.session_state.clear()
             st.rerun()
 

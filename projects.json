@@ -7,13 +7,14 @@
       "languages": [
         "Vietnamese"
       ],
-      "writing_style": "",
+      "environment": [
+        "Chrome"
+      ],
       "jira_project_key": "LT",
       "jira_server": "http://10.101.0.217:8080/",
       "jira_username": "luctv",
       "jira_password": "luctv",
       "xray_test_steps_field": "customfield_11203",
-      "detail_level": "",
       "testing_types": [
         "UI Testing",
         "Functional Testing",
@@ -32,6 +33,42 @@
       },
       "exclusion_rules": [],
       "steps_detail": "⚖️ Medium Detail - Balanced main actions & outcomes"
+    }
+  },
+  {
+    "id": 2,
+    "settings": {
+      "name": "thaind",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "environment": [
+        "Chrome"
+      ],
+      "jira_project_key": "",
+      "jira_server": "",
+      "jira_username": "",
+      "jira_password": "",
+      "xray_test_steps_field": "customfield_11203",
+      "testing_types": [
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing",
+        "Security Testing",
+        "Performance Testing",
+        "Accessibility Testing",
+        "API/Integration Testing",
+        "Responsive Testing"
+      ],
+      "priority_levels": {
+        "critical": "System crashes, data loss, security vulnerabilities, core functionality broken",
+        "high": "Major features not working, significant performance issues, important bugs",
+        "medium": "Minor features affected, cosmetic issues, non-critical bugs",
+        "low": "Enhancement requests, minor UI improvements, nice-to-have features"
+      },
+      "exclusion_rules": [],
+      "steps_detail": "📋 High Detail - Comprehensive step-by-step"
     }
   }
 ]
