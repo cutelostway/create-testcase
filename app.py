@@ -48,6 +48,13 @@ def get_project(project_id: int) -> Dict[str, Any] | None:
             return p
     return None
 
+def render_back_button():
+    """Render back button at the top of the page"""
+    col1, col2, col3 = st.columns([1, 6, 1])
+    with col1:
+        if st.button("← Back", type="secondary", use_container_width=False):
+            go_to('home')
+
 # Test case storage helpers
 TEST_CASES_FILE = os.path.join(os.getcwd(), "test_cases.json")
 
@@ -504,9 +511,11 @@ def view_home():
 
 
 def view_create_project():
+    render_back_button()
     render_project_form(mode="create")
 
 def view_edit_project(project_id: int | None):
+    render_back_button()
     if not project_id:
         st.error("Không tìm thấy project để chỉnh sửa")
         return
@@ -517,6 +526,7 @@ def view_edit_project(project_id: int | None):
     render_project_form(mode="edit", project=project)
 
 def view_create_test_case(project_id: int | None):
+    render_back_button()
     # Load selected project if available
     if project_id:
         project = get_project(project_id)
