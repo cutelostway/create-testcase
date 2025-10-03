@@ -268,6 +268,10 @@ if 'editing_test_case' not in st.session_state:
     st.session_state.editing_test_case = None
 if 'saved_test_cases' not in st.session_state:
     st.session_state.saved_test_cases = {}
+if 'show_delete_confirmation' not in st.session_state:
+    st.session_state.show_delete_confirmation = False
+if 'delete_test_case_index' not in st.session_state:
+    st.session_state.delete_test_case_index = None
 
 # Page configuration
 st.set_page_config(page_title="AI Test Case Generator", page_icon="🧪", layout="wide")
@@ -836,12 +840,51 @@ def view_create_test_case(project_id: int | None):
                         st.markdown(f"**✅ Expected Result:** {case_dict.get('expected_result', '')}")
                         st.markdown(f"**💬 Comments:** {case_dict.get('comments', '')}")
                     with col_case3:
-                        if st.button("✏️ Chỉnh sửa", key=f"edit_btn_{i-1}", help="Chỉnh sửa test case này"):
-                            st.session_state.editing_test_case = index_zero_based
-                            st.rerun()
+                        col_edit, col_delete = st.columns(2)
+                        with col_edit:
+                            if st.button("✏️ Chỉnh sửa", key=f"edit_btn_{i-1}", help="Chỉnh sửa test case này"):
+                                st.session_state.editing_test_case = index_zero_based
+                                st.rerun()
+                        with col_delete:
+                            if st.button("🗑️ Xóa", key=f"delete_btn_{i-1}", help="Xóa test case này", type="secondary"):
+                                # Store the test case index to delete
+                                st.session_state.delete_test_case_index = index_zero_based
+                                st.session_state.show_delete_confirmation = True
+                                st.rerun()
                     
                     st.markdown("**📋 Test Steps:**")
                     st.info(case_dict.get('test_steps', ''))
+        
+        # Show delete confirmation dialog
+        if st.session_state.get('show_delete_confirmation', False):
+            delete_index = st.session_state.get('delete_test_case_index', -1)
+            if delete_index >= 0 and delete_index < len(test_cases):
+                test_case_to_delete = test_cases[delete_index]
+                test_case_dict = convert_test_case_to_dict(test_case_to_delete)
+                
+                st.warning("⚠️ Xác nhận xóa Test Case")
+                st.markdown(f"**Bạn có chắc chắn muốn xóa Test Case:** `{test_case_dict.get('test_title', 'Untitled')}`?")
+                
+                col_confirm, col_cancel = st.columns(2)
+                with col_confirm:
+                    if st.button("✅ Xác nhận xóa", type="primary"):
+                        # Delete the test case
+                        del test_cases[delete_index]
+                        # Reset editing state if this was being edited
+                        if st.session_state.get('editing_test_case') == delete_index:
+                            st.session_state.editing_test_case = None
+                        # Clear confirmation state
+                        st.session_state.show_delete_confirmation = False
+                        st.session_state.delete_test_case_index = None
+                        st.success(f"✅ Đã xóa Test Case thành công!")
+                        st.rerun()
+                
+                with col_cancel:
+                    if st.button("❌ Hủy", type="secondary"):
+                        st.session_state.show_delete_confirmation = False
+                        st.session_state.delete_test_case_index = None
+                        st.rerun()
+        
         st.markdown("---")
         col_export = st.columns([1, 2, 1])
         with col_export[1]:

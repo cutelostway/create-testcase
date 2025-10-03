@@ -1,0 +1,24 @@
+{
+  "1": [
+    {
+      "test_case_id": 2,
+      "test_title": "Trường Mật khẩu",
+      "description": "Kiểm tra xác thực mật khẩu",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu (matkhau123)\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển đến trang chủ",
+      "test_data": "matkhau123",
+      "expected_result": "Hệ thống chấp nhận mật khẩu và cho phép đăng nhập thành công",
+      "comments": "Kiểm tra trường hợp mật khẩu hợp lệ"
+    },
+    {
+      "test_case_id": 3,
+      "test_title": "Nút Đăng nhập",
+      "description": "Kiểm tra chức năng nút đăng nhập",
+      "preconditions": "Người dùng đã nhập email và mật khẩu",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ vào trường email\n3. Nhập mật khẩu hợp lệ vào trường mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công và chuyển hướng đến trang chủ",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống xử lý đăng nhập và chuyển hướng đến trang chủ",
+      "comments": "Kiểm tra chức năng đăng nhập cơ bản"
+    }
+  ]
+}
