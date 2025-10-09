@@ -53,7 +53,29 @@ def render_back_button():
     col1, col2, col3 = st.columns([1, 6, 1])
     with col1:
         if st.button("← Back", type="secondary", use_container_width=False):
-            go_to('home')
+            # Get current page and project ID
+            params = get_query_params()
+            current_page = (params.get('page', ["home"]) or ["home"])[0]
+            current_project_id = params.get('id', [None])[0]
+            current_project_id = int(current_project_id) if current_project_id not in (None, "", []) else None
+            
+            # Determine where to go back based on current page
+            if current_page == 'create-test-case':
+                # If we're in create-test-case, check if we have a project_id
+                # If yes, go back to edit-project; otherwise go to home
+                if current_project_id:
+                    go_to('edit-project', current_project_id)
+                else:
+                    go_to('home')
+            elif current_page == 'edit-project':
+                # If we're in edit-project, go back to home
+                go_to('home')
+            elif current_page == 'create-project':
+                # If we're in create-project, go back to home
+                go_to('home')
+            else:
+                # Default fallback to home
+                go_to('home')
 
 # Test case storage helpers
 TEST_CASES_FILE = os.path.join(os.getcwd(), "test_cases.json")
@@ -459,7 +481,7 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
                 exclusion_rules.append(value)
 
     st.markdown("---")
-    col_submit = st.columns([1, 1, 3])
+    col_submit = st.columns([1, 1, 1, 2])
     btn_label = "💾 Save Project" if is_edit else "✅ Create Project"
     with col_submit[0]:
         if st.button(btn_label, type="primary"):
@@ -499,6 +521,12 @@ def render_project_form(mode: str = "create", project: Dict[str, Any] | None = N
     with col_submit[1]:
         if st.button("❌ Cancel"):
             go_to('home')
+    with col_submit[2]:
+        # Only show "Create Testcase" button in edit mode and if project exists
+        if is_edit and project and project.get('id'):
+            if st.button("🧪 Create Testcase", type="secondary"):
+                st.session_state.project_settings = project.get('settings', {})
+                go_to('create-test-case', project['id'])
 
 # VIEWS -----------------------------------------------------------------------
 def view_home():

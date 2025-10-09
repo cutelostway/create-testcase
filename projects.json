@@ -11,7 +11,9 @@
         "Chrome",
         "Windows",
         "Firefox",
-        "Android"
+        "Android",
+        "iOS",
+        "MacOS"
       ],
       "jira_project_key": "LT",
       "jira_server": "http://10.101.0.217:8080/",

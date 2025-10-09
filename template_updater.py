@@ -93,8 +93,6 @@ def update_report_sheet(wb, project_settings, test_cases):
         environments = project_settings.get('environment', [])
         for idx, env in enumerate(environments):
             ws[f"C{4 + idx}"] = env
-        # Không thay đổi gì thêm
-        print(f"Report sheet: ghi {len(environments)} environment(s) vào C4..C{3+len(environments)}")
     except Exception as e:
         print(f"Lỗi khi cập nhật Report sheet: {e}")
 
@@ -142,8 +140,6 @@ def update_module_sheets(wb, project_settings, test_cases):
                 # Cột G: Priority dựa trên test_case_id
                 priority = get_priority_from_test_case(tc_dict)
                 ws[f"G{current_row}"] = priority
-                
-            print(f"  Đã điền {y} test cases vào dòng {start_row}-{end_row-1}")
             
     except Exception as e:
         print(f"Lỗi khi cập nhật Module sheets: {e}")
