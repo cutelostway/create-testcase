@@ -75,5 +75,44 @@
       "exclusion_rules": [],
       "steps_detail": "📋 High Detail - Comprehensive step-by-step"
     }
+  },
+  {
+    "id": 3,
+    "settings": {
+      "name": "REX",
+      "description": "",
+      "languages": [
+        "English"
+      ],
+      "environment": [
+        "Chrome",
+        "Windows",
+        "Android",
+        "iOS"
+      ],
+      "jira_project_key": "",
+      "jira_server": "",
+      "jira_username": "",
+      "jira_password": "",
+      "xray_test_steps_field": "customfield_11203",
+      "testing_types": [
+        "UI Testing",
+        "Functional Testing",
+        "Data Validation Testing",
+        "Security Testing",
+        "Performance Testing",
+        "Accessibility Testing",
+        "API/Integration Testing",
+        "Responsive Testing"
+      ],
+      "priority_levels": {
+        "critical": "System crashes, data loss, security vulnerabilities, core functionality broken",
+        "high": "Major features not working, significant performance issues, important bugs",
+        "medium": "Minor features affected, cosmetic issues, non-critical bugs",
+        "low": "Enhancement requests, minor UI improvements, nice-to-have features"
+      },
+      "exclusion_rules": [],
+      "steps_detail": "📋 High Detail - Comprehensive step-by-step"
+    }
   }
 ]

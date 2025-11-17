@@ -100,5 +100,107 @@
       "expected_result": "Hiển thị thông báo xác thực, không làm hỏng dữ liệu",
       "comments": "Được tạo tự động do lỗi phân tích/mô hình"
     }
+  ],
+  "3": [
+    {
+      "test_case_id": 1,
+      "test_title": "Trường Email",
+      "description": "Kiểm tra nhập email hợp lệ và xác thực",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống hiển thị trang chủ",
+      "comments": "Kiểm tra trường hợp thành công"
+    },
+    {
+      "test_case_id": 2,
+      "test_title": "Lỗi Trường Email",
+      "description": "Kiểm tra thông báo lỗi xác thực email",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi",
+      "test_data": "invalid_email, matkhau123",
+      "expected_result": "Hệ thống hiển thị thông báo lỗi",
+      "comments": "Kiểm tra trường hợp thất bại"
+    },
+    {
+      "test_case_id": 3,
+      "test_title": "Trường Mật khẩu",
+      "description": "Kiểm tra nhập mật khẩu hợp lệ và xác thực",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu hợp lệ\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống hiển thị trang chủ",
+      "comments": "Kiểm tra trường hợp thành công"
+    },
+    {
+      "test_case_id": 4,
+      "test_title": "Lỗi Trường Mật khẩu",
+      "description": "Kiểm tra thông báo lỗi xác thực mật khẩu",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu không hợp lệ\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi",
+      "test_data": "test@example.com, invalid_password",
+      "expected_result": "Hệ thống hiển thị thông báo lỗi",
+      "comments": "Kiểm tra trường hợp thất bại"
+    },
+    {
+      "test_case_id": 5,
+      "test_title": "Nút Đăng nhập",
+      "description": "Kiểm tra chức năng đăng nhập",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu hợp lệ\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống hiển thị trang chủ",
+      "comments": "Kiểm tra trường hợp thành công"
+    },
+    {
+      "test_case_id": 6,
+      "test_title": "Lỗi Nút Đăng nhập",
+      "description": "Kiểm tra thông báo lỗi chức năng đăng nhập",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi",
+      "test_data": "invalid_email, matkhau123",
+      "expected_result": "Hệ thống hiển thị thông báo lỗi",
+      "comments": "Kiểm tra trường hợp thất bại"
+    },
+    {
+      "test_case_id": 7,
+      "test_title": "Thông báo Lỗi",
+      "description": "Kiểm tra thông báo lỗi chung",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu không hợp lệ\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi",
+      "test_data": "invalid_email, invalid_password",
+      "expected_result": "Hệ thống hiển thị thông báo lỗi",
+      "comments": "Kiểm tra trường hợp thất bại"
+    },
+    {
+      "test_case_id": 8,
+      "test_title": "Trường Email (Khách hàng)",
+      "description": "Kiểm tra nhập email hợp lệ và xác thực cho khách hàng",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống hiển thị trang chủ",
+      "comments": "Kiểm tra trường hợp thành công"
+    },
+    {
+      "test_case_id": 9,
+      "test_title": "Lỗi Trường Email (Khách hàng)",
+      "description": "Kiểm tra thông báo lỗi xác thực email cho khách hàng",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email không hợp lệ\n3. Nhập mật khẩu\n4. Nhấp nút đăng nhập\n5. Xác minh thông báo lỗi",
+      "test_data": "invalid_email, matkhau123",
+      "expected_result": "Hệ thống hiển thị thông báo lỗi",
+      "comments": "Kiểm tra trường hợp thất bại"
+    },
+    {
+      "test_case_id": 10,
+      "test_title": "Trường Mật khẩu (Khách hàng)",
+      "description": "Kiểm tra nhập mật khẩu hợp lệ và xác thực cho khách hàng",
+      "preconditions": "Người dùng đã mở trang đăng nhập",
+      "test_steps": "1. Mở trang đăng nhập\n2. Nhập email hợp lệ\n3. Nhập mật khẩu hợp lệ\n4. Nhấp nút đăng nhập\n5. Xác minh đăng nhập thành công",
+      "test_data": "test@example.com, matkhau123",
+      "expected_result": "Hệ thống hiển thị trang chủ",
+      "comments": "Kiểm tra trường hợp thành công"
+    }
   ]
 }
