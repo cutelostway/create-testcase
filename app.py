@@ -6,6 +6,7 @@ from spec_processor import process_uploaded_spec
 from jira_sync import sync_test_cases_to_jira
 import os
 import json
+import re
 from typing import Dict, Any, List
 
 # Storage helpers
@@ -26,6 +27,48 @@ def load_projects() -> List[Dict[str, Any]]:
 def save_projects(projects: List[Dict[str, Any]]):
     with open(PROJECTS_FILE, "w", encoding="utf-8") as f:
         json.dump(projects, f, ensure_ascii=False, indent=2)
+
+
+def sanitize_ai_output(text: str) -> str:
+    """Remove default wrapper sections from AI spec analysis."""
+    if not text:
+        return text
+    
+    sanitized = text.strip()
+    wrap_patterns = [
+        r"^#\s*Câu Chuyện Người Dùng Được Tạo Từ Đặc Tả\s*\(AI\)\s*\n*",
+        r"^#\s*AI-Generated User Story from Specification\s*\n*",
+        r"^#\s*Phân Tích Đặc Tả\s*\(Dự phòng\)\s*\n*",
+        r"^#\s*Specification Analysis\s*\(Fallback\)\s*\n*",
+    ]
+    for pattern in wrap_patterns:
+        sanitized = re.sub(pattern, "", sanitized, flags=re.IGNORECASE | re.MULTILINE)
+    
+    if "---" in sanitized:
+        sanitized = sanitized.split("---")[0]
+    
+    summary_markers = [
+        r"\*\*Tóm Tắt Đặc Tả Gốc:\*\*.*",
+        r"\*\*Original Specification Summary:\*\*.*",
+        r"\*\*Lưu Ý:\*\*.*",
+        r"\*\*Note:\*\*.*",
+    ]
+    for marker in summary_markers:
+        sanitized = re.sub(marker, "", sanitized, flags=re.IGNORECASE | re.DOTALL)
+
+    # Remove any remaining prompt sections (Specification or Screenshot summaries)
+    prompt_markers = [
+        "## Specification Document",
+        "## Screenshot Insights",
+        "**Specification Summary**",
+        "**Screenshot Summary**",
+    ]
+    for marker in prompt_markers:
+        idx = sanitized.find(marker)
+        if idx != -1:
+            sanitized = sanitized[:idx]
+
+    return sanitized.strip()
 
 def upsert_project(project: Dict[str, Any]) -> Dict[str, Any]:
     projects = load_projects()
@@ -627,41 +670,106 @@ def view_create_test_case(project_id: int | None):
     st.markdown("### 📄 Upload Specification Document (Optional)")
     st.markdown("Upload a specification document to automatically generate user story from your requirements using AI analysis.")
     
+    # Track expander state so it stays open after uploads
+    if "spec_expander_open" not in st.session_state:
+        st.session_state.spec_expander_open = False
+    if "spec_last_doc_name" not in st.session_state:
+        st.session_state.spec_last_doc_name = None
+    if "spec_last_image_names" not in st.session_state:
+        st.session_state.spec_last_image_names = []
+
+    current_doc_state = None
+    if st.session_state.get("spec_uploader"):
+        current_doc_state = st.session_state["spec_uploader"].name
+
+    current_image_state: list[str] = []
+    if st.session_state.get("spec_screenshot_uploader"):
+        current_image_state = sorted(
+            [img.name for img in st.session_state["spec_screenshot_uploader"]]
+        )
+
+    doc_changed = (
+        current_doc_state
+        and current_doc_state != st.session_state.get("spec_last_doc_name")
+    )
+    images_changed = (
+        current_image_state
+        and current_image_state != st.session_state.get("spec_last_image_names")
+    )
+    if doc_changed or images_changed:
+        st.session_state.spec_expander_open = True
+
+    st.session_state.spec_last_doc_name = current_doc_state
+    st.session_state.spec_last_image_names = current_image_state
+
     # Create expandable section for file upload
-    with st.expander("📤 Upload & Analyze Specification", expanded=False):
+    with st.expander(
+        "📤 Upload & Analyze Specification",
+        expanded=st.session_state.get("spec_expander_open", False),
+    ):
         col_upload1, col_upload2 = st.columns([3, 1])
         
         with col_upload1:
             uploaded_file = st.file_uploader(
                 "Choose a specification file",
-                type=['xlsx', 'pdf', 'docx'],
-                help="Supported formats: Excel (.xlsx), PDF (.pdf), Word (.docx)",
+                type=['xlsx', 'pdf', 'docx', 'md'],
+                help="Supported formats: Excel (.xlsx), PDF (.pdf), Word (.docx), Markdown (.md)",
                 key="spec_uploader"
             )
         
+        image_files = st.file_uploader(
+            "Upload screenshots (optional)",
+            type=['png', 'jpg', 'jpeg', 'bmp', 'gif'],
+            help="Supported formats: PNG, JPG, JPEG, BMP, GIF. Use these to capture UI flows or screen states.",
+            key="spec_screenshot_uploader",
+            accept_multiple_files=True
+        )
+        
+        has_inputs = bool(uploaded_file or image_files)
+        
         with col_upload2:
-            analyze_btn = st.button("🔍 Analyze Spec", type="secondary", use_container_width=True)
+            analyze_btn = st.button("🔍 Analyze Spec", type="secondary", use_container_width=True, disabled=not has_inputs)
         
         # Show file info if uploaded
         if uploaded_file:
             st.info(f"📎 **File selected:** {uploaded_file.name} ({uploaded_file.size} bytes)")
+        
+        if image_files:
+            image_names = ", ".join([img.name for img in image_files])
+            st.info(f"🖼️ **Screenshots selected:** {image_names}")
             
         # Show analysis status
         if st.session_state.get('generated_user_story'):
             st.success("✅ Specification analyzed! User story generated below.")
     
     # Process uploaded file
-    if uploaded_file and analyze_btn:
+    if analyze_btn and has_inputs:
         with st.spinner("🔄 Analyzing specification document..."):
             try:
-                file_content = uploaded_file.read()
-                file_type = uploaded_file.type
+                file_content = uploaded_file.read() if uploaded_file else None
+                file_type = uploaded_file.type if uploaded_file else None
+                file_name = uploaded_file.name if uploaded_file else None
+                
+                image_payloads = []
+                if image_files:
+                    for image in image_files:
+                        image_payloads.append({
+                            "name": image.name,
+                            "type": image.type,
+                            "content": image.getvalue()
+                        })
                 
                 # Process the spec file
-                generated_story = process_uploaded_spec(file_content, file_type, settings)
+                generated_story = process_uploaded_spec(
+                    file_content=file_content,
+                    file_type=file_type,
+                    project_settings=settings,
+                    image_files=image_payloads,
+                    file_name=file_name
+                )
                 
                 # Store in session state for auto-fill
-                st.session_state.generated_user_story = generated_story
+                st.session_state.generated_user_story = sanitize_ai_output(generated_story)
                 st.success("✅ Specification analyzed successfully! User story generated below.")
                 
             except Exception as e:
@@ -713,7 +821,7 @@ def view_create_test_case(project_id: int | None):
     with col_gen[0]:
         generate_btn = st.button("🎯 Generate Test Cases", type="primary", use_container_width=True)
     with col_gen[1]:
-        num_cases = st.number_input("Max Cases", min_value=1, max_value=50, value=10)
+        num_cases = st.number_input("Max Cases", min_value=1, max_value=100, value=10)
     with col_gen[2]:
         export_format = st.selectbox("Export", ["Excel", "CSV", "JSON"])
     with col_gen[3]:
@@ -755,7 +863,6 @@ def view_create_test_case(project_id: int | None):
                     # If we found key functionality, use it as context
                     if key_functionality:
                         cleaned_story = '\n'.join(key_functionality[:5])  # Take first 5 key points
-                        st.info("ℹ️ Extracted key functionality from user story for better test case generation.")
                     
                     # Limit story length to prevent API issues
                     if len(cleaned_story) > 2000:

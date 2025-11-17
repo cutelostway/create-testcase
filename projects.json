@@ -82,13 +82,10 @@
       "name": "REX",
       "description": "",
       "languages": [
-        "English"
+        "Vietnamese"
       ],
       "environment": [
-        "Chrome",
-        "Windows",
-        "Android",
-        "iOS"
+        "Chrome"
       ],
       "jira_project_key": "",
       "jira_server": "",

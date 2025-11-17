@@ -7,15 +7,64 @@ from docx import Document
 import io
 import tempfile
 import os
-from typing import Optional, Dict, Any
+import shutil
+import mimetypes
+from typing import Optional, Dict, Any, List
+from PIL import Image
 from tester_agent import generate_test_cases
+def _truncate_text_for_model(text: str, max_tokens: int = 5900, approx_chars_per_token: int = 4) -> str:
+    """
+    Truncate text to fit within model token limits (approximation-based).
+    Keeps both the beginning and end context.
+    """
+    if not text:
+        return text
+    
+    max_chars = max_tokens * approx_chars_per_token
+    if len(text) <= max_chars:
+        return text
+    
+    indicator = "\n\n...[Đã rút gọn nội dung để phù hợp giới hạn mô hình]...\n\n"
+    half = (max_chars - len(indicator)) // 2
+    head = text[:half]
+    tail = text[-half:]
+    return head + indicator + tail
 
-def extract_text_from_file(file_content: bytes, file_type: str) -> str:
+def _normalize_file_type(file_type: Optional[str], file_name: Optional[str]) -> Optional[str]:
+    """
+    Attempt to determine the correct MIME type using provided type or filename.
+    """
+    if file_type and file_type != "application/octet-stream":
+        return file_type
+    
+    if file_name:
+        guessed_type, _ = mimetypes.guess_type(file_name)
+        if guessed_type:
+            return guessed_type
+        
+        extension = os.path.splitext(file_name)[1].lower()
+        ext_map = {
+            ".md": "text/markdown",
+            ".markdown": "text/markdown",
+            ".txt": "text/plain",
+        }
+        return ext_map.get(extension, file_type)
+    
+    return file_type
+
+
+def extract_text_from_file(file_content: Optional[bytes], file_type: Optional[str], file_name: Optional[str] = None) -> str:
     """
     Extract text content from uploaded file based on file type
     """
+    if not file_content:
+        return ""
+    
+    effective_type = _normalize_file_type(file_type, file_name)
+    if not effective_type:
+        return ""
     try:
-        if file_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+        if effective_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
             # Excel file
             df = pd.read_excel(io.BytesIO(file_content))
             # Convert all columns to string and join
@@ -25,7 +74,7 @@ def extract_text_from_file(file_content: bytes, file_type: str) -> str:
                 text_content += df[column].astype(str).str.cat(sep="\n")
             return text_content
             
-        elif file_type == "application/pdf":
+        elif effective_type == "application/pdf":
             # PDF file
             text_content = ""
             try:
@@ -40,13 +89,20 @@ def extract_text_from_file(file_content: bytes, file_type: str) -> str:
                     text_content += page.extract_text() + "\n"
             return text_content
             
-        elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        elif effective_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
             # Word document
             doc = Document(io.BytesIO(file_content))
             text_content = ""
             for paragraph in doc.paragraphs:
                 text_content += paragraph.text + "\n"
             return text_content
+        
+        elif effective_type in ("text/markdown", "text/plain"):
+            # Markdown or plain text document
+            try:
+                return file_content.decode("utf-8")
+            except UnicodeDecodeError:
+                return file_content.decode("latin-1", errors="ignore")
             
         else:
             return "Unsupported file type"
@@ -195,17 +251,93 @@ Focus on creating actionable, testable requirements that cover both positive and
 
 **Manual Review Required:** Please review the specification content above and manually create a user story for test case generation."""
 
-def process_uploaded_spec(file_content: bytes, file_type: str, project_settings: Dict[str, Any]) -> str:
+def extract_text_from_images(image_files: Optional[List[Dict[str, Any]]]) -> str:
+    """
+    Extract text content from uploaded screenshots using OCR
+    """
+    if not image_files:
+        return ""
+    
+    try:
+        import pytesseract
+
+        tess_cmd_env = os.getenv("TESSERACT_CMD")
+        potential_paths = [
+            tess_cmd_env,
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"
+        ]
+        # Remove None and duplicates while keeping order
+        potential_paths = [path for path in potential_paths if path]
+
+        if not shutil.which("tesseract"):
+            for path in potential_paths:
+                if os.path.exists(path):
+                    pytesseract.pytesseract.tesseract_cmd = path
+                    break
+            else:
+                st.warning("Không tìm thấy tesseract trong PATH. Vui lòng cài đặt Tesseract OCR hoặc set biến môi trường TESSERACT_CMD.")
+                return "\n".join([f"Screenshot: {img.get('name', 'Unnamed')} - Tesseract executable not found." for img in image_files])
+    except ImportError:
+        st.warning("Không thể phân tích ảnh vì thiếu thư viện pytesseract. Vui lòng cài đặt bổ sung để sử dụng OCR cho ảnh.")
+        # Fallback: provide metadata summary
+        summary = []
+        for image in image_files:
+            summary.append(f"Screenshot: {image.get('name', 'Unnamed')} - OCR not available.")
+        return "\n".join(summary)
+    
+    extracted_segments = []
+    
+    for image in image_files:
+        try:
+            image_data = Image.open(io.BytesIO(image["content"]))
+            ocr_text = pytesseract.image_to_string(image_data)
+            image_data.close()
+            cleaned_text = ocr_text.strip()
+            if cleaned_text:
+                extracted_segments.append(f"Screenshot ({image.get('name', 'Unnamed')}):\n{cleaned_text}")
+            else:
+                extracted_segments.append(f"Screenshot ({image.get('name', 'Unnamed')}): Unable to extract readable text.")
+        except Exception as e:
+            st.error(f"Lỗi khi đọc ảnh {image.get('name', 'Unnamed')}: {str(e)}")
+    
+    return "\n\n".join(extracted_segments)
+
+
+def process_uploaded_spec(
+    file_content: Optional[bytes],
+    file_type: Optional[str],
+    project_settings: Dict[str, Any],
+    image_files: Optional[List[Dict[str, Any]]] = None,
+    file_name: Optional[str] = None
+) -> str:
     """
     Main function to process uploaded spec file and return user story
     """
-    # Extract text from file
-    spec_text = extract_text_from_file(file_content, file_type)
+    # Extract text from document file
+    normalized_type = _normalize_file_type(file_type, file_name)
+    spec_text = extract_text_from_file(file_content, normalized_type, file_name)
+    if spec_text == "Unsupported file type":
+        st.error("Định dạng tài liệu không được hỗ trợ. Vui lòng chọn các định dạng được liệt kê.")
+        spec_text = ""
     
-    if not spec_text or spec_text == "Unsupported file type":
-        return "Could not extract text from the uploaded file. Please try a different file format."
+    # Extract text from screenshots
+    image_text = extract_text_from_images(image_files)
+    
+    content_sections = []
+    if spec_text:
+        content_sections.append("## Specification Document\n" + spec_text)
+    
+    if image_text:
+        content_sections.append("## Screenshot Insights\n" + image_text)
+    
+    if not content_sections:
+        return "Could not extract content from the uploaded files. Please provide supported documents or clearer screenshots."
+    
+    combined_content = "\n\n".join(content_sections)
+    combined_content = _truncate_text_for_model(combined_content)
     
     # Analyze with AI
-    user_story = analyze_spec_with_ai(spec_text, project_settings)
+    user_story = analyze_spec_with_ai(combined_content, project_settings)
     
     return user_story
